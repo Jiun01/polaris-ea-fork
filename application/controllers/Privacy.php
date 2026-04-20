@@ -63,6 +63,14 @@ class Privacy extends EA_Controller
                 throw new InvalidArgumentException('Invalid customer token format.');
             }
 
+            if (!isset($this->cache) || !is_object($this->cache)) {
+                $this->load->driver('cache', ['adapter' => 'file']);
+            }
+
+            if (!isset($this->cache) || !is_object($this->cache)) {
+                throw new RuntimeException('Cache service is not available, please try again later.');
+            }
+
             $customer_id = $this->cache->get('customer-token-' . $customer_token);
 
             if (empty($customer_id)) {
@@ -96,22 +104,34 @@ class Privacy extends EA_Controller
      */
     private function apply_privacy_rate_limit(): void
     {
-        $this->load->driver('cache', ['adapter' => 'file']);
+        try {
+            $this->load->driver('cache', ['adapter' => 'file']);
 
-        $ip = $this->input->ip_address();
-        $cache_key = 'privacy_delete_attempts_' . str_replace([':', '.'], '_', $ip);
+            if (!isset($this->cache) || !is_object($this->cache)) {
+                log_message('debug', 'Cache driver not available, skipping privacy rate limit check.');
+                return;
+            }
 
-        $attempts = $this->cache->get($cache_key);
+            $ip = $this->input->ip_address();
+            $cache_key = 'privacy_delete_attempts_' . str_replace([':', '.'], '_', $ip);
 
-        if ($attempts === false) {
-            $this->cache->save($cache_key, 1, 900); // 15 minutes
-        } else {
+            $attempts = $this->cache->get($cache_key);
+
+            if ($attempts === false) {
+                $this->cache->save($cache_key, 1, 900); // 15 minutes
+                return;
+            }
+
             $this->cache->save($cache_key, $attempts + 1, 900);
 
             if ($attempts >= 3) {
                 log_message('warning', 'Privacy deletion rate limit exceeded for IP: ' . $ip);
                 throw new RuntimeException('Too many deletion attempts. Please try again later.');
             }
+        } catch (RuntimeException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            log_message('error', 'Cache error in privacy rate limiting: ' . $e->getMessage());
         }
     }
 
