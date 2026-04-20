@@ -5,6 +5,10 @@ developers to maintain and readjust their custom modifications on the main proje
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `notify_users_on_update_question` translations in 40 non-English language files to match the correct English meaning ("send out a notification" instead of "notify the client/customer")
+
 ### Added
 
 - Added a "Test" button to the login form
