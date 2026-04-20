@@ -10,6 +10,10 @@ developers to maintain and readjust their custom modifications on the main proje
 - Fixed `notify_users_on_update_question` translations in 40 non-English language files to match the correct English meaning ("send out a notification" instead of "notify the client/customer")
 - Fixed "Call to a member function get() on null" error in Privacy controller's `delete_personal_information` method by adding defensive cache driver checks
 
+### Improved
+
+- Improved appointment deletion flow: ask notification question first, only show the cancellation reason dialog when the user chooses to notify users
+
 ### Added
 
 - Added a "Test" button to the login form
