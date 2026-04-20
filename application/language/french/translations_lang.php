@@ -574,5 +574,4 @@ $lang['about_app_premium'] = 'Nous proposons des services complets pour les logi
 $lang['go_premium'] = 'Passer à Premium';
 $lang['notify_users_on_create_question'] = 'Souhaitez-vous informer le client de ce nouveau rendez-vous ?';
 $lang['notify_users_on_delete_question'] = 'Souhaitez-vous informer le client de l\'annulation du rendez-vous ?';
-$lang['select_language'] = 'Select Language';
 // End

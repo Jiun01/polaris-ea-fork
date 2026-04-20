@@ -574,5 +574,4 @@ $lang['about_app_premium'] = 'Προσφέρουμε ολοκληρωμένες 
 $lang['go_premium'] = 'Αναβάθμιση σε Premium';
 $lang['notify_users_on_create_question'] = 'Θέλετε να ειδοποιήσετε τον πελάτη για αυτό το νέο ραντεβού;';
 $lang['notify_users_on_delete_question'] = 'Θέλετε να ειδοποιήσετε τον πελάτη για την ακύρωση του ραντεβού;';
-$lang['select_language'] = 'Select Language';
 // End

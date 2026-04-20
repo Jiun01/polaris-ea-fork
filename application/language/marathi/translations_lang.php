@@ -574,5 +574,4 @@ $lang['about_app_premium'] = 'आम्ही सेल्फ-होस्टे
 $lang['go_premium'] = 'Premium मिळवा';
 $lang['notify_users_on_create_question'] = 'या नवीन भेटीबद्दल ग्राहकाला सूचित करू इच्छिता?';
 $lang['notify_users_on_delete_question'] = 'भेट रद्द झाल्याबद्दल ग्राहकाला सूचित करू इच्छिता?';
-$lang['select_language'] = 'Select Language';
 // End

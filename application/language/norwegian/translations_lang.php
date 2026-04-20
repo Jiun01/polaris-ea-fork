@@ -574,5 +574,4 @@ $lang['about_app_premium'] = 'Vi tilbyr helhetlige tjenester for selvhostet prog
 $lang['go_premium'] = 'Bli Premium';
 $lang['notify_users_on_create_question'] = 'Vil du varsle kunden om denne nye avtalen?';
 $lang['notify_users_on_delete_question'] = 'Vil du varsle kunden om avbestillingen av avtalen?';
-$lang['select_language'] = 'Select Language';
 // End

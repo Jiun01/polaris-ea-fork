@@ -574,5 +574,4 @@ $lang['about_app_premium'] = 'Oferujemy kompleksowe usługi dla samodzielnie hos
 $lang['go_premium'] = 'Przejdź na Premium';
 $lang['notify_users_on_create_question'] = 'Czy chcesz powiadomić klienta o tym nowym spotkaniu?';
 $lang['notify_users_on_delete_question'] = 'Czy chcesz powiadomić klienta o anulowaniu spotkania?';
-$lang['select_language'] = 'Select Language';
 // End

@@ -574,5 +574,4 @@ $lang['about_app_premium'] = 'Ponujamo celovite storitve za samo-gostovano progr
 $lang['go_premium'] = 'Nadgradi na Premium';
 $lang['notify_users_on_create_question'] = 'Ali želite stranko obvestiti o tem novem terminu?';
 $lang['notify_users_on_delete_question'] = 'Ali želite stranko obvestiti o preklicu termina?';
-$lang['select_language'] = 'Select Language';
 // End

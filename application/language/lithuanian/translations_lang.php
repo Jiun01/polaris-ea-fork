@@ -574,5 +574,4 @@ $lang['about_app_premium'] = 'Siūlome visapusiškus sprendimus savarankiškai t
 $lang['go_premium'] = 'Go Premium';
 $lang['notify_users_on_create_question'] = 'Ar norite pranešti klientui apie šį naują susitikimą?';
 $lang['notify_users_on_delete_question'] = 'Ar norite pranešti klientui apie susitikimo atšaukimą?';
-$lang['select_language'] = 'Select Language';
 // End

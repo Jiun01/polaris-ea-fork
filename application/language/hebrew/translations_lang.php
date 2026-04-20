@@ -574,5 +574,4 @@ $lang['about_app_premium'] = 'אנו מציעים שירותים מקצה לקצ
 $lang['go_premium'] = 'עבור ל-Premium';
 $lang['notify_users_on_create_question'] = 'האם ברצונך להודיע ללקוח על תור חדש זה?';
 $lang['notify_users_on_delete_question'] = 'האם ברצונך להודיע ללקוח על ביטול התור?';
-$lang['select_language'] = 'Select Language';
 // End

@@ -574,5 +574,4 @@ $lang['about_app_premium'] = 'Tarjoamme kokonaispalveluja itse ylläpidetylle oh
 $lang['go_premium'] = 'Go Premium';
 $lang['notify_users_on_create_question'] = 'Haluatko ilmoittaa asiakkaalle tästä uudesta ajanvarauksesta?';
 $lang['notify_users_on_delete_question'] = 'Haluatko ilmoittaa asiakkaalle ajanvarauksen peruutuksesta?';
-$lang['select_language'] = 'Select Language';
 // End

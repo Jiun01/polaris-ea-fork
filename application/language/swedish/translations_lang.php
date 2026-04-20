@@ -574,5 +574,4 @@ $lang['about_app_premium'] = 'Vi erbjuder heltäckande tjänster för egen-hosta
 $lang['go_premium'] = 'Bli Premium';
 $lang['notify_users_on_create_question'] = 'Vill du skicka en avisering om det nya mötet till kunden?';
 $lang['notify_users_on_delete_question'] = 'Vill du skicka en avisering om avbokningen till kunden?';
-$lang['select_language'] = 'Select Language';
 // End

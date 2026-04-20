@@ -574,5 +574,4 @@ $lang['about_app_premium'] = 'Átfogó szolgáltatásokat kínálunk saját üze
 $lang['go_premium'] = 'Premium verzió';
 $lang['notify_users_on_create_question'] = 'Szeretné értesíteni az ügyfelet erről az új időpontról?';
 $lang['notify_users_on_delete_question'] = 'Szeretné értesíteni az ügyfelet az időpont törléséről?';
-$lang['select_language'] = 'Select Language';
 // End

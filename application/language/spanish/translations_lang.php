@@ -574,5 +574,4 @@ $lang['about_app_premium'] = 'Ofrecemos servicios integrales para software autoa
 $lang['go_premium'] = 'Obtener Premium';
 $lang['notify_users_on_create_question'] = '¿Desea notificar al cliente sobre esta nueva cita?';
 $lang['notify_users_on_delete_question'] = '¿Desea notificar al cliente sobre la cancelación de la cita?';
-$lang['select_language'] = 'Select Language';
 // End
