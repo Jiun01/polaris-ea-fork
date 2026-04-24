@@ -86,9 +86,9 @@ body .modal.full-screen .modal-push {
 .backend-page .form-control[readonly],
 .backend-page .form-select:disabled,
 .backend-page .form-select[readonly] {
-    background-color: var(--bs-white);
-    color: var(--bs-secondary);
-    border-color: var(--bs-white);
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border-color: var(--bs-body-bg);
     opacity: 1;
     padding-left: 0;
     padding-right: 0;
