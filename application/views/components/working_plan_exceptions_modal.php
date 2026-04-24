@@ -73,7 +73,7 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                     <?= lang('cancel') ?>
                 </button>
                 <button type="button" class="btn btn-primary" id="working-plan-exceptions-save">

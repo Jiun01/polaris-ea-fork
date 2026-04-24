@@ -13,6 +13,7 @@ developers to maintain and readjust their custom modifications on the main proje
 ### Improved
 
 - Improved appointment deletion flow: ask notification question first, only show the cancellation reason dialog when the user chooses to notify users
+- Restyled secondary action buttons (Cancel, Close) to use the outline secondary variant for a consistent UI
 
 ### Added
 

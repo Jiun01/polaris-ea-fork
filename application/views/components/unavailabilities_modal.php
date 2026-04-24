@@ -82,7 +82,7 @@
             </div>
             <div class="modal-footer">
 
-                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
                     <?= lang('cancel') ?>
                 </button>
                 <button id="save-unavailability" class="btn btn-primary">

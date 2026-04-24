@@ -44,7 +44,7 @@
                         <i class="fas fa-check-square me-2"></i>
                         <?= lang('save') ?>
                     </button>
-                    <button id="cancel-admin" class="btn btn-secondary">
+                    <button id="cancel-admin" class="btn btn-outline-secondary">
                         <?= lang('cancel') ?>
                     </button>
                     <button id="delete-admin" class="btn btn-outline-danger ms-2">

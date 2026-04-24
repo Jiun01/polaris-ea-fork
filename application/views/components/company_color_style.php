@@ -151,25 +151,6 @@ if (!empty($company_color) && $company_color !== DEFAULT_COMPANY_COLOR):
         border-color: var(--ea-primary-active);
     }
 
-    .btn-secondary {
-        --bs-btn-color: var(--bs-primary);
-        --bs-btn-hover-color: var(--ea-primary-active);
-        color: var(--bs-primary);
-    }
-
-    .btn-secondary:hover {
-        color: var(--ea-primary-active);
-    }
-
-    .btn-outline-secondary {
-        --bs-btn-color: var(--bs-secondary);
-        --bs-btn-hover-color: var(--bs-dark);
-        --bs-btn-active-color: var(--bs-dark);
-    }
-
-    .btn-outline-secondary:focus {
-        box-shadow: 0 0 0 0.25rem rgba(var(--bs-secondary-rgb), 0.2);
-    }
 
     /* Form component overrides */
     .form-control:focus,
@@ -306,10 +287,6 @@ if (!empty($company_color) && $company_color !== DEFAULT_COMPANY_COLOR):
     #book-appointment-wizard #company-name .display-booking-selection {
         color: var(--ea-primary-darker);
         border-right-color: var(--ea-primary-darker);
-    }
-
-    #header #header-logo small {
-        color: var(--ea-primary-darker) !important;
     }
 
     .backend-page .filter-records .results .entry.selected {

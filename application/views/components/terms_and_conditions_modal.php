@@ -17,7 +17,7 @@
                 <?= pure_html($terms_and_conditions_content) ?>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                     <?= lang('close') ?>
                 </button>
             </div>
