@@ -21,7 +21,9 @@ class Migration_Add_company_color_setting extends EA_Migration
         if (!$this->db->get_where('settings', ['name' => 'company_color'])->num_rows()) {
             $this->db->insert('settings', [
                 'name' => 'company_color',
-                'value' => '#ffffff',
+                // Polaris brand-action coral per getpolaris.my global.css (--polaris-coral).
+                // Tenants may override via Settings -> Business -> Company Color.
+                'value' => '#F76F53',
             ]);
         }
     }
