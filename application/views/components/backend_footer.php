@@ -15,14 +15,6 @@
     </div>
 
     <div class="mb-3 me-lg-5 mb-lg-0">
-        <img class="me-1" src="<?= base_url('assets/img/alextselegidis-logo-16x16.png') ?>" alt="Alex Tselegidis Logo">
-
-        <a href="https://alextselegidis.com">Alex Tselegidis</a>
-
-        &copy; <?= date('Y') ?> - Software Development
-    </div>
-
-    <div class="mb-3 me-lg-5 mb-lg-0">
         <?= lang('licensed_under') ?>
         <a href="https://www.gnu.org/licenses/gpl-3.0.en.html">
             GPL-3.0
