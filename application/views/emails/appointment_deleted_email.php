@@ -16,7 +16,7 @@
 <head>
     <title><?= lang('appointment_cancelled_title') ?> | Polaris Calendar</title>
 </head>
-<body style="font: 13px arial, helvetica, tahoma;">
+<body style="font: 13px 'Bricolage Grotesque', arial, helvetica, tahoma;">
 
 <div class="email-container" style="width: 650px; border: 1px solid #eee; margin: 30px auto;">
     <div id="header"
