@@ -1,8 +1,8 @@
 {
-  "name": "easyappointments",
-  "description": "Open Source Web Scheduler",
-  "homepage": "https://easyappointments.org",
-  "author": "A.Tselegidis <alextselegidis@gmail.com>",
+  "name": "polaris-ea-fork",
+  "description": "Polaris Calendar — booking subsystem (white-labelled fork of Easy!Appointments)",
+  "homepage": "https://getpolaris.my",
+  "author": "Polaris <support@getpolaris.my> (fork of Easy!Appointments by A.Tselegidis <alextselegidis@gmail.com>)",
   "license": "GPL-3.0",
   "keywords": [
     "calendar",
@@ -15,10 +15,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alextselegidis/easyappointments.git"
+    "url": "git+https://github.com/Jiun01/polaris-ea-fork.git"
   },
   "bugs": {
-    "url": "https://github.com/alextselegidis/easyappointments/issues"
+    "url": "https://github.com/Jiun01/polaris-ea-fork/issues"
   },
   "engines": {
     "node": ">=14"

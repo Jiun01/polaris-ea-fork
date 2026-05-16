@@ -1,1 +1,9 @@
 * text=auto
+
+# Polaris fork — binary fonts must not pass through line-ending normalization
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.otf    binary
+*.eot    binary
+*.ico    binary
