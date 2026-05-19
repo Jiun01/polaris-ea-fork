@@ -1,0 +1,14 @@
+.git
+.github
+node_modules
+vendor
+storage/cache/*
+storage/logs/*
+storage/uploads/*
+tests
+*.md
+.env
+.env.*
+docker/baikal
+docker/mysql
+docker/openldap
