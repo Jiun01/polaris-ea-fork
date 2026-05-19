@@ -81,6 +81,35 @@ class Booking extends EA_Controller
     }
 
     /**
+     * Polaris tenant slug entry-point (S3-5).
+     *
+     * Resolves the slug to a tenant_id via ea_polaris_tenants (S3-6), sets
+     * the tenant context, then delegates to index() for the standard booking
+     * page render. Invalid or suspended slugs produce a branded 404.
+     *
+     * URL: /book/{slug}  →  routes.php maps to  booking/slug/$1
+     */
+    public function slug(string $slug): void
+    {
+        // Validate slug format before touching the DB.
+        if (!preg_match('/^[a-z][a-z0-9-]{0,98}$/', $slug)) {
+            show_404();
+
+            return;
+        }
+
+        try {
+            MY_Controller::from_slug($slug);
+        } catch (RuntimeException) {
+            show_404();
+
+            return;
+        }
+
+        $this->index();
+    }
+
+    /**
      * Render the booking page and display the selected appointment.
      *
      * This method will call the "index" callback to handle the page rendering.
@@ -269,6 +298,8 @@ class Booking extends EA_Controller
             'default_timezone' => setting('default_timezone'),
         ]);
 
+        $polaris_turnstile_sitekey = (string) $this->config->item('polaris_turnstile_sitekey');
+
         html_vars([
             'available_services' => $available_services,
             'available_providers' => $available_providers,
@@ -313,6 +344,7 @@ class Booking extends EA_Controller
             'appointment_data' => $appointment,
             'provider_data' => $provider,
             'customer_data' => $customer,
+            'polaris_turnstile_sitekey' => $polaris_turnstile_sitekey,
         ]);
 
         $this->load->view('pages/booking');
@@ -324,10 +356,23 @@ class Booking extends EA_Controller
     public function register(): void
     {
         try {
+            // IP rate limit: 10 booking attempts per IP per hour.
+            rate_limit($this->input->ip_address(), 10, 3600);
+
             $disable_booking = setting('disable_booking');
 
             if ($disable_booking) {
                 abort(403);
+            }
+
+            // Cloudflare Turnstile server-side verification.
+            $turnstile_secret = (string) $this->config->item('polaris_turnstile_secret');
+            if ($turnstile_secret !== '') {
+                $turnstile_token = (string) request('cf-turnstile-response', '');
+                if ($turnstile_token === '' || !$this->verify_turnstile($turnstile_secret, $turnstile_token)) {
+                    json_response(['message' => lang('turnstile_verification_failed')], 422);
+                    return;
+                }
             }
 
             $post_data = request('post_data');
@@ -770,5 +815,31 @@ class Booking extends EA_Controller
         }
 
         return $provider_list;
+    }
+
+    /**
+     * Verify a Cloudflare Turnstile token server-side.
+     *
+     * Returns true on success, false on failure or network error.
+     */
+    private function verify_turnstile(string $secret, string $token): bool
+    {
+        $ch = curl_init('https://challenges.cloudflare.com/turnstile/v0/siteverify');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 5,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => http_build_query(['secret' => $secret, 'response' => $token]),
+        ]);
+        $body = curl_exec($ch);
+        curl_close($ch);
+
+        if ($body === false) {
+            return false;
+        }
+
+        $result = json_decode($body, true);
+
+        return isset($result['success']) && $result['success'] === true;
     }
 }
