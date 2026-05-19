@@ -1,3 +1,3 @@
 @echo off
-"C:\Program Files\Git\usr\bin\bash.exe" -c "cd \"$(dirname \"$0\")\" && bash docker/build.sh --push"
+"C:\Program Files\Git\usr\bin\bash.exe" --login -i -c "cd '%~dp0' && bash docker/build.sh --push"
 pause
