@@ -36,3 +36,8 @@
 /_polaris_preview.html
 /_polaris_*.html
 
+# Secrets and local dev helpers (never commit)
+/.env
+/.env.*
+/push-image.bat
+
