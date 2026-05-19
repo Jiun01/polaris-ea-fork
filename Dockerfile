@@ -9,7 +9,9 @@ RUN npm ci --prefer-offline
 COPY gulpfile.js .
 COPY assets assets
 
-RUN npx gulp build
+# `compile` = clean + vendor + scripts + styles (no archive step).
+# `build` additionally zips the full source tree for release — not needed here.
+RUN npx gulp compile
 
 # ── Stage 2: install PHP vendor dependencies ──────────────────────────────────
 FROM php:8.4-cli AS vendor
