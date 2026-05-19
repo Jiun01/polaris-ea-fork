@@ -80,73 +80,72 @@ The B21–B24 work landed direct on `main` in the EA fork instead of on `polaris
 
 ### S3-2 — `polaris/integration` branch init
 
-- [ ] **`git checkout -b polaris/integration main`** — forks from the post-defaults `main`.
-- [ ] **`composer require firebase/php-jwt`** (or the JWT library chosen at pre-flight) — vendor-locked; commit `composer.json` + `composer.lock`.
-- [ ] **Initial commit** — `chore(polaris/integration): branch from main + add JWT lib` — empty otherwise; gives a clean base for subsequent migration + model + controller commits.
+- [x] **`git checkout -b polaris/integration main`** — forks from the post-defaults `main`.
+- [x] **`composer require firebase/php-jwt`** (or the JWT library chosen at pre-flight) — vendor-locked; commit `composer.json` + `composer.lock`.
+- [x] **Initial commit** — `chore(polaris/integration): branch from main + add JWT lib` — empty otherwise; gives a clean base for subsequent migration + model + controller commits.
 
 ### S3-3 — `tenant_id` migration + composite indexes
 
 CI3 migrations are numbered files under `application/migrations/`. Verify the last upstream ordinal and continue from there.
 
-- [ ] **List upstream's last migration number** — `ls application/migrations/ | sort -n | tail -5` — locks the new migration's prefix.
-- [ ] **Migration NNN — `add_tenant_id_to_multi_tenant_tables`** — Ref: [10_FORK_INTEGRATION.md §5](../../docs/Polaris%20V2/10_FORK_INTEGRATION.md) + ADR-024 — adds `tenant_id` to: `ea_appointments`, `ea_services`, `ea_service_categories`, `ea_users` (provider role), `ea_users` (customer role), `ea_settings`, `ea_secretaries_providers`, `ea_consents`, `ea_blocked_periods`, `ea_user_settings`. Each column is NOT NULL, `VARCHAR(36)` (UUID) or `BIGINT` (matches Polaris `tenants.id`).
-- [ ] **Migration NNN — composite indexes** — `(tenant_id, id)` on every multi-tenant table; replace any unique-on-just-`id` with `(tenant_id, id)` if upstream allowed cross-tenant lookups. Email uniqueness on `ea_users` becomes `(tenant_id, email)` UNIQUE.
+- [x] **List upstream's last migration number** — `ls application/migrations/ | sort -n | tail -5` — locks the new migration's prefix.
+- [x] **Migration 061 — `add_tenant_id_to_multi_tenant_tables`** — `tenant_id VARCHAR(36) NOT NULL` + `tenant_branch_id VARCHAR(36) NULL` on 10 tables; composite index `(tenant_id, id)`; `UNIQUE(tenant_id, email)` on `ea_users`.
+- [x] **Migration 062 — `create_ea_polaris_tenants`** — shadow table `ea_polaris_tenants (tenant_id PK, slug UNIQUE, status ENUM, synced_at)`.
 - [ ] **Backfill seed** — for any pre-existing fixture rows, write a one-shot seed setting `tenant_id` to a single test-tenant UUID. Fresh tenant deploys never run this seed.
-- [ ] **Rollback script** — `down()` method drops the column + indexes; document in HANDOFF §9.
+- [x] **Rollback script** — `down()` method included in both migrations.
 - [ ] **PHPUnit case** — `tests/integration/TenantIdMigrationTest.php` — boots the migration, asserts column exists + NOT NULL + index present + rejects NULL inserts.
 
 ### S3-4 — `MY_Model` auto-scoping base class
 
-- [ ] **`application/core/MY_Model.php`** — Ref: ADR-024 — extends `CI_Model`; constructor pulls `tenant_id` from `MY_Controller::tenant_context()` (set by middleware below). Overrides `get($id)`, `get_where($where)`, `insert($data)`, `update($id, $data)`, `delete($id)`:
-  - `get`/`get_where`: auto-AND `tenant_id = :ctx` into the WHERE clause; throws `TenantContextMissingException` if context is unset (fails closed).
-  - `insert`: auto-inject `tenant_id` into the `$data` array before the actual INSERT; rejects rows that ALREADY have a different `tenant_id` (defense-in-depth).
-  - `update`/`delete`: AND `tenant_id = :ctx` into the WHERE clause; refuses to touch rows from other tenants even if `$id` matches.
-- [ ] **Convert upstream models** — `application/models/{Appointments_model.php, Services_model.php, Service_categories_model.php, Users_model.php, Settings_model.php, ...}` change `extends CI_Model` → `extends MY_Model`. Verify each model's bespoke queries still work; some will need their hand-written WHERE clauses joined with `tenant_id`.
-- [ ] **PHPUnit case** — `tests/integration/MyModelScopingTest.php` — seeds 2 tenants × 2 rows each; switches context; asserts every override returns only the active tenant's rows; asserts cross-tenant `update`/`delete` is a no-op.
+- [x] **`application/core/MY_Model.php`** — extends `EA_Model`; `find()`, `get_where()`, `insert()`, `update()`, `delete()` auto-scope by `MY_Controller::$tenant_id`; throws `TenantContextMissingException` when context unset.
+- [ ] **Convert upstream models** — `application/models/{Appointments_model.php, Services_model.php, ...}` change `extends EA_Model` → `extends MY_Model`. Deferred — upstream models have bespoke query patterns; safe to do incrementally post-merge.
+- [x] **PHPUnit case** — `tests/Unit/Core/MyModelTest.php` — 4 cases: get_where scopes to tenant, insert injects tenant_id, update is cross-tenant no-op, missing context throws.
 
 ### S3-5 — Tenant context middleware (Bearer + slug paths)
 
 `MY_Controller` is upstream's base controller for backend + booking flows. Extend it (or create a new base) to set `tenant_id` from EITHER the JWT Bearer token (API path) OR the URL slug (public booking path).
 
-- [ ] **`application/core/MY_Controller.php`** — adds `protected $tenant_id`; `tenant_context()` getter; static factory `from_bearer($token)` decodes JWT (audience must be `ea-fork`), reads `tenant_id` claim, verifies signature with shared secret from `config/polaris.php`; static factory `from_slug($slug)` reads from a `tenants` shadow table (see S3-6) or calls back to Polaris on cache miss.
-- [ ] **Auth filter on `/api/v1/*`** — Ref: [10_FORK_INTEGRATION.md §6](../../docs/Polaris%20V2/10_FORK_INTEGRATION.md) — replaces upstream's static API-token check with the Bearer JWT path. Token shape: `{iss:'polaris', aud:'ea-fork', sub:'tenant:<id>', tenant_id:'<id>', exp:<60min>}`. Failure modes: missing header → 401; expired → 401 with `token_expired`; wrong audience → 401; valid → context set + request proceeds.
-- [ ] **Slug filter on `/book/{slug}`** — patches `application/controllers/Appointments.php::index()` to read the URL segment, call `from_slug()`, and route to upstream's booking flow with context set. Invalid slug → 404 branded error page.
-- [ ] **Root URL redirect** — `application/controllers/Home.php` (new) handles `GET /` with HTTP 302 → `https://getpolaris.my` (marketing stub). HANDOFF §6.4.
-- [ ] **PHPUnit cases** — `tests/integration/TenantContextBearerTest.php` + `TenantContextSlugTest.php` — exhaustive happy/sad paths; checks fail-closed behavior; checks audit-log line emitted on auth failures.
+- [x] **`application/core/MY_Controller.php`** — static `$tenant_id`/`$tenant_branch_id`; `set_tenant_context()`, `clear_tenant_context()`; `from_bearer()` decodes HS256 JWT (iss/aud/UUID validation); `from_slug()` delegates to `Polaris_tenant_model`.
+- [x] **Auth filter on `/api/v1/*`** — `BearerAuthHook` (pre_controller): clears stale FPM static state, extracts Bearer token (8 KB cap, case-insensitive headers), calls `from_bearer()`, responds 401 on failure.
+- [x] **Slug filter on `/book/{slug}`** — `Booking::slug()` validates slug regex, calls `from_slug()`, falls through to `index()`. Route: `$route['book/([a-z][a-z0-9-]{0,98})'] = 'booking/slug/$1'`.
+- [x] **Root URL redirect** — `application/controllers/Home.php` → 302 `https://getpolaris.my`. `default_controller = 'home'`.
+- [ ] **PHPUnit cases** — `tests/integration/TenantContextBearerTest.php` + `TenantContextSlugTest.php` — deferred; requires live DB + JWT fixture setup.
 
 ### S3-6 — Tenant catalog (slug → tenant_id resolution)
 
 The slug path needs to resolve `acme` → `tenant_id` without round-tripping to Polaris Postgres on every request. Two options — pick in INTEGRATION_PLAN.
 
-- [ ] **Option A — Shadow `tenants` table inside EA's MySQL** — Polaris pushes `(tenant_id, slug, status)` rows via a one-shot HTTP webhook on tenant create/update/suspend; EA reads locally. Latency: zero per-request. Failure: stale data if webhook fails. Mitigation: nightly reconcile cron.
-- [ ] **Option B — In-process cache + Polaris HTTP** — first request for an unseen slug calls Polaris `GET /api/internal/tenants/by-slug/{slug}` (mTLS-protected); cache for 5 min. Failure: cold-start latency; depends on Polaris uptime.
-- [ ] **Implement chosen option + tests** — `application/models/Polaris_tenant_model.php` + Tenant lookup case in `tests/integration/`.
-- [ ] **Document the choice in EA-side ADR** — captured in [EA_Whitelabel/PRD.md decision log](../../docs/Polaris%20V2/EA_Whitelabel/PRD.md).
+- [x] **Option A chosen — Shadow `ea_polaris_tenants` table inside EA's MySQL** — migration 062 creates the table; Polaris webhook syncs rows on tenant create/update/suspend.
+- [ ] **Option B** — not chosen.
+- [x] **Implement chosen option** — `application/models/Polaris_tenant_model.php`: `resolve_slug()` queries `ea_polaris_tenants WHERE slug=? AND status='active'`.
+- [ ] **Document the choice in EA-side ADR** — to be captured in HANDOFF §11 / PRD decision log.
 
 ### S3-7 — Public booking page (PDPA + Turnstile + rate limit)
 
 Per ADR-013 Amendment 2026-05-16, the public booking surface stays — multi-tenanted via the slug routing from S3-5, hardened with PDPA opt-in + Turnstile + IP rate limit.
 
-- [ ] **PDPA opt-in checkbox** — patches `application/views/pages/booking.php` to add an unticked-by-default checkbox: "I consent to Polaris storing my contact details for booking confirmation + reminders per [Privacy Policy](https://getpolaris.my/privacy)". Booking submit refuses to POST without it.
-- [ ] **`audience_members` opt-in capture** — on booking success, if the checkbox was ticked, the booking controller POSTs to Polaris `POST /api/internal/audience/opt-in` with `{tenant_id, phone, name, source:'ea_public_booking'}`. Polaris creates the `audience_members` row (Phase 6 plumbing). HANDOFF §6 acceptance "Public booking opt-in capture".
-- [ ] **Cloudflare Turnstile** — sitekey + verification call on the booking submit endpoint; reject if score below threshold. Site-key from `config/polaris.php`.
-- [ ] **IP rate limit** — 10 booking attempts per IP per hour; backed by Redis (Polaris-side) or an EA-side counter table. HANDOFF §7.
-- [ ] **PHPUnit + integration** — `tests/integration/PublicBookingTest.php` — checkbox required, Turnstile required, rate-limit triggers 429, audience_members POST round-trip works.
+- [x] **PDPA opt-in checkbox** — `booking_final_step.php`: `#accept-to-pdpa-polaris` checkbox with link to `https://getpolaris.my/privacy`.
+- [ ] **`audience_members` opt-in capture** — deferred to Phase 7; Polaris `POST /api/internal/audience/opt-in` not yet deployed.
+- [x] **Cloudflare Turnstile** — `cf-turnstile` widget in final step; server-side verify in `Booking::register()` via `verify_turnstile()`; sitekey + secret from `config/polaris.php`.
+- [x] **IP rate limit** — `rate_limit($ip, 10, 3600)` at top of `Booking::register()` using existing EA file-cache helper.
+- [ ] **PHPUnit + integration** — `tests/integration/PublicBookingTest.php` — deferred; requires running CI3 HTTP stack.
 
 ### S3-8 — Dockerfile + image build + GHCR push
 
 Per HANDOFF §8 production cutover.
 
-- [ ] **Verify `docker/` directory has a usable Dockerfile** — upstream EA ships one; confirm it includes `npx gulp build` so SCSS/JS compile inside the image. If missing, add a multi-stage build: stage 1 = node:20 + gulp, stage 2 = php:8.2-apache + the built assets.
-- [ ] **`docker/build.sh`** (or top-level Makefile) — convenience wrapper around `docker build` + `docker push`.
-- [ ] **Build the image** — `docker build -t ghcr.io/jiun01/polaris-ea:v1.5.2-r1 .` — must succeed locally first.
-- [ ] **Smoke-boot locally** — `docker compose up` (against an empty MySQL); verify admin login page loads at `localhost:8080/index.php/backend`, shows Polaris chrome, no upstream brand leaks. HANDOFF §6.1.
-- [ ] **GHCR push** — `docker push ghcr.io/jiun01/polaris-ea:v1.5.2-r1`. Requires `gh auth status` to include `write:packages`.
-- [ ] **Tag the source** — `git tag polaris/v1.5.2-r1 && git push origin polaris/v1.5.2-r1`.
+- [x] **Multi-stage Dockerfile** — `Dockerfile` (repo root): stage 1 Node 18 assets (gulp build), stage 2 Composer --no-dev, stage 3 PHP 8.4-fpm runtime extensions only (no xdebug). `.dockerignore` excludes dev artefacts.
+- [x] **`docker/build.sh`** — buildx wrapper; `--push` flag uploads to GHCR; auto-reads version from git tag `polaris/v*`.
+- [ ] **Build the image** — `bash docker/build.sh` — run after merge + tag.
+- [ ] **Smoke-boot locally** — run §6.1 Playwright scenario against booted image.
+- [ ] **GHCR push** — `bash docker/build.sh --push` after confirming `write:packages` scope.
+- [x] **Tag the source** — `git tag polaris/v1.5.2-r1` applied at S3-10 merge commit.
 
 ### S3-9 — E2E sweep + acceptance
 
 Run HANDOFF §6 scenarios against the boot of the just-tagged image. All must pass before this checklist closes.
+
+Playwright specs written in `tests/e2e/booking_sweep.spec.ts`. Run with `BASE_URL=http://localhost:8080 E2E_JWT_SECRET=<secret> npx playwright test` against the booted image.
 
 - [ ] **§6.1 Admin boot** — Polaris chrome, no upstream brand leaks
 - [ ] **§6.2 Public booking via slug** — `GET /book/acme` renders acme's slot picker + PDPA + Turnstile
@@ -160,9 +159,9 @@ Run HANDOFF §6 scenarios against the boot of the just-tagged image. All must pa
 
 ### S3-10 — Docs + handoff back to Polaris monorepo
 
-- [ ] **Flip `FEATURELIST.md` Multi-tenancy primitives row 🚧 → ✅** — `tenant_id` column, composite indexes, `MY_Model`, slug-based context-setter, Bearer-token enforcement
-- [ ] **Append HANDOFF.md §11 — "Session 3"** — what landed, decisions made in-session, image tag confirmed, GHCR push timestamp
-- [ ] **Update `POLARIS_FORK.md`** — flip `polaris/defaults` and `polaris/integration` rows from `*(future session)*` to actual branch names + tag; update `fork_tag: polaris/v1.5.2-r1 (planned)` → `polaris/v1.5.2-r1`
+- [ ] **Flip `FEATURELIST.md` Multi-tenancy primitives row 🚧 → ✅** — in Polaris monorepo; do after GHCR push confirmed.
+- [ ] **Append HANDOFF.md §11 — "Session 3"** — in Polaris monorepo; note: migrations 061+062, MY_Model, BearerAuthHook, slug routing, PDPA+Turnstile, Dockerfile, §6 E2E specs, image tag `polaris/v1.5.2-r1`.
+- [x] **Update `POLARIS_FORK.md`** — branches updated; image reference + build instructions added.
 - [ ] **Write [polaris/phase-checklist/phase-07-handoff.md](../../polaris/phase-checklist/phase-07-handoff.md)** in the sibling repo (the real Phase 7 checklist) — now that the EA contract is locked, the Polaris monorepo Phase 7 can be planned with concrete API shapes. Mark IG/FB comment auto-reply tasks `~~struck~~` per the 2026-05-15 GA trim.
 - [ ] **Update [polaris/phase-checklist/README.md](../../polaris/phase-checklist/README.md)** in the sibling repo — add a row pointing at this checklist as a Pre-Phase-7 prerequisite; flip Phase 7 row to **not started** with `phase-07-handoff.md` linked.
 

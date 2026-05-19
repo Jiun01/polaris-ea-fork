@@ -11,5 +11,16 @@
 |
 */
 
+// ── Polaris Bearer JWT auth (S3-5) ───────────────────────────────────────────
+// Validates the Authorization: Bearer <jwt> header on every /api/v1/* request
+// and populates MY_Controller::$tenant_id before the controller runs.
+$hook['pre_controller'][] = [
+    'class'    => 'BearerAuthHook',
+    'function' => 'validate',
+    'filename' => 'BearerAuthHook.php',
+    'filepath' => 'hooks',
+    'params'   => [],
+];
+
 /* End of file hooks.php */
 /* Location: ./application/config/hooks.php */

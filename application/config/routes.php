@@ -51,7 +51,13 @@
 
 require_once __DIR__ . '/../helpers/routes_helper.php';
 
-$route['default_controller'] = 'booking';
+// Root URL → marketing redirect (handled by Home controller).
+$route['default_controller'] = 'home';
+
+// Polaris public booking path: /book/{slug} → Booking::slug($slug).
+// Pattern: lowercase letter + up to 98 alphanumeric/hyphen chars = valid slug.
+// MUST appear before any catch-all routes.
+$route['book/([a-z][a-z0-9-]{0,98})'] = 'booking/slug/$1';
 
 $route['404_override'] = '';
 
@@ -85,9 +91,15 @@ $route['translate_uri_dashes'] = FALSE;
 |
 */
 
-header('Access-Control-Allow-Origin: ' . ($_SERVER['HTTP_ORIGIN'] ?? '*')); // NOTICE: Change this header to restrict CORS access.
-
-header('Access-Control-Allow-Credentials: "true"');
+// Restrict CORS to the Polaris marketing origin only.
+// Do NOT reflect arbitrary origins — that combined with Allow-Credentials
+// would allow any site to make credentialed cross-origin API calls.
+$_polaris_allowed_origin = getenv('POLARIS_CORS_ORIGIN') ?: 'https://getpolaris.my';
+if (isset($_SERVER['HTTP_ORIGIN']) && $_SERVER['HTTP_ORIGIN'] === $_polaris_allowed_origin) {
+    header('Access-Control-Allow-Origin: ' . $_polaris_allowed_origin);
+    header('Access-Control-Allow-Credentials: true');
+}
+unset($_polaris_allowed_origin);
 
 if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']))
 {
