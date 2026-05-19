@@ -1,4 +1,6 @@
 .git
+.gitignore
+.gitattributes
 .github
 node_modules
 vendor
@@ -6,9 +8,19 @@ storage/cache/*
 storage/logs/*
 storage/uploads/*
 tests
+phpunit.xml
+phpunit.xml.dist
+playwright.config.ts
+playwright-results.json
+test-results/
 *.md
 .env
 .env.*
+docker-compose*.yml
+Dockerfile
+*.sql
+.vscode
+.idea
 docker/baikal
 docker/mysql
 docker/openldap

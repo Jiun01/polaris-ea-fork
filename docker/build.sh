@@ -30,14 +30,18 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "▶ Building ${IMAGE}:${DOCKER_TAG}"
-docker buildx build \
-    --platform linux/amd64 \
-    --target production \
-    --tag "${IMAGE}:${DOCKER_TAG}" \
-    --tag "${IMAGE}:latest" \
-    --file Dockerfile \
-    ${PUSH:+--push} \
-    .
+
+# Build args in an array so unquoted word-splitting cannot corrupt the command.
+build_args=(
+    --platform linux/amd64
+    --target production
+    --tag "${IMAGE}:${DOCKER_TAG}"
+    --tag "${IMAGE}:latest"
+    --file Dockerfile
+)
+[[ "$PUSH" == "true" ]] && build_args+=(--push)
+
+docker buildx build "${build_args[@]}" .
 
 echo "✔ Build complete: ${IMAGE}:${DOCKER_TAG}"
 if [[ "$PUSH" == "true" ]]; then

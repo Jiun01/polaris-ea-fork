@@ -14,7 +14,8 @@ RUN npx gulp build
 # ── Stage 2: install PHP vendor dependencies ──────────────────────────────────
 FROM php:8.4-cli AS vendor
 
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+# Use the official Composer image — avoids curl-piping an installer and pins the version.
+COPY --from=composer:2.7 /usr/bin/composer /usr/local/bin/composer
 
 WORKDIR /build
 
@@ -47,7 +48,14 @@ RUN apt-get update \
         intl \
         exif \
         bcmath \
-    && apt-get -y autoremove \
+    && apt-get purge -y --auto-remove \
+        libfreetype6-dev \
+        libpng-dev \
+        libjpeg-dev \
+        libwebp-dev \
+        libxml2-dev \
+        libcurl4-openssl-dev \
+        libonig-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -63,13 +71,17 @@ COPY --from=vendor  /build/vendor  ./vendor
 # Production PHP settings (no xdebug).
 COPY docker/php-fpm/php-ini-production.ini /usr/local/etc/php/conf.d/polaris-production.ini
 
-# Storage must be writable by www-data.
+# Writable directories: storage/ (uploads/cache/logs) plus CI3 runtime dirs.
 RUN mkdir -p storage/uploads storage/cache storage/logs \
-    && chown -R www-data:www-data storage \
-    && chmod -R 775 storage
+        application/cache application/logs \
+    && chown -R www-data:www-data storage application/cache application/logs \
+    && chmod -R 775 storage application/cache application/logs
 
 USER www-data
 
 EXPOSE 9000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD pgrep -x php-fpm > /dev/null || exit 1
 
 CMD ["php-fpm"]

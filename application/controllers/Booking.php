@@ -367,9 +367,15 @@ class Booking extends EA_Controller
 
             // Cloudflare Turnstile server-side verification.
             $turnstile_secret = (string) $this->config->item('polaris_turnstile_secret');
-            if ($turnstile_secret !== '') {
+            if ($turnstile_secret === '') {
+                // Log a warning so misconfigured deployments are detectable in logs.
+                log_message('error', 'Polaris: POLARIS_TURNSTILE_SECRET is not configured — Turnstile bot protection is disabled.');
+            } else {
                 $turnstile_token = (string) request('cf-turnstile-response', '');
-                if ($turnstile_token === '' || !$this->verify_turnstile($turnstile_secret, $turnstile_token)) {
+                // Cap token length before passing to curl — Cloudflare tokens are
+                // well under 2 KB; an oversized value is always invalid.
+                if ($turnstile_token === '' || strlen($turnstile_token) > 2048
+                    || !$this->verify_turnstile($turnstile_secret, $turnstile_token)) {
                     json_response(['message' => lang('turnstile_verification_failed')], 422);
                     return;
                 }
