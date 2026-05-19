@@ -51,7 +51,10 @@ class Migration_Add_ea_polaris_tenants_table extends EA_Migration
                 'null'       => false,
             ],
             'synced_at' => [
-                'type'    => 'TIMESTAMP',
+                // DATETIME (not TIMESTAMP) avoids the 2038 limit and is
+                // timezone-neutral — MySQL TIMESTAMP is converted on read
+                // according to the session time_zone variable.
+                'type'    => 'DATETIME',
                 'null'    => false,
                 'default' => 'CURRENT_TIMESTAMP',
             ],
@@ -65,7 +68,7 @@ class Migration_Add_ea_polaris_tenants_table extends EA_Migration
         $prefixed = $this->db->dbprefix('polaris_tenants');
         $this->db->query(
             "ALTER TABLE `{$prefixed}`
-             ADD UNIQUE INDEX `uq_polaris_tenants_slug` (`slug`)"
+             ADD UNIQUE INDEX IF NOT EXISTS `uq_polaris_tenants_slug` (`slug`)"
         );
     }
 
