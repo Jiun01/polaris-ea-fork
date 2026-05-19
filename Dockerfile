@@ -17,6 +17,12 @@ FROM php:8.4-cli AS vendor
 # Use the official Composer image — avoids curl-piping an installer and pins the version.
 COPY --from=composer:2.7 /usr/bin/composer /usr/local/bin/composer
 
+# unzip: lets Composer extract dist archives without falling back to git clone.
+# git: fallback for packages whose dist is unavailable (e.g. dev-master sources).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unzip git \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /build
 
 COPY composer.json composer.lock ./
