@@ -17,10 +17,19 @@ This repository is a **white-labelled fork of [Easy!Appointments](https://github
 |---|---|
 | `main` | Mirrors upstream `1.5.2` exactly. Move forward only when the fork is rebased onto a newer EA tag. |
 | `polaris/whitelabel` | Brand sweep across user-facing strings, views, emails, assets. English locale only at GA. |
-| `polaris/defaults` | Polaris install configs (timezone, currency, sender email); installer seed step disabled. *(future session)* |
-| `polaris/integration` | `tenant_id` migration + `MY_Model` enforcement + Bearer-token / slug-based tenant context; merge target. *(future session)* |
+| `polaris/defaults` | Polaris install configs (timezone, currency, sender email); installer seed step disabled. Merged into main. |
+| `polaris/integration` | `tenant_id` migration + `MY_Model` enforcement + Bearer-token / slug routing + PDPA/Turnstile + multi-stage Dockerfile + §6 E2E sweep. Merged into main → tagged `polaris/v1.5.2-r1`. |
 
 Tagging convention: `polaris/v1.5.2-r1` (first Polaris revision atop upstream `1.5.2`).
+
+## Production image
+
+```
+ghcr.io/jiun01/polaris-ea:v1.5.2-r1
+```
+
+Build and push: `bash docker/build.sh --push`  
+JWT secret, Turnstile keys, and CORS origin are sourced from environment variables — see `application/config/polaris.php`.
 
 ## Documentation
 
