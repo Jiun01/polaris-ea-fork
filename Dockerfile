@@ -46,6 +46,7 @@ RUN apt-get update \
         libxml2-dev \
         libcurl4-openssl-dev \
         libonig-dev \
+        libicu-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" \
         curl \
@@ -66,6 +67,7 @@ RUN apt-get update \
         libxml2-dev \
         libcurl4-openssl-dev \
         libonig-dev \
+        libicu-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
