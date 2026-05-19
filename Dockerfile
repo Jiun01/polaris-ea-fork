@@ -20,7 +20,9 @@ COPY --from=composer:2.7 /usr/bin/composer /usr/local/bin/composer
 WORKDIR /build
 
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --optimize-autoloader --no-interaction
+# --ignore-platform-reqs: the vendor stage has no PHP extensions; extensions
+# are verified at runtime in the production stage, not at package-download time.
+RUN composer install --no-dev --no-scripts --optimize-autoloader --no-interaction --ignore-platform-reqs
 
 # ── Stage 3: production image ──────────────────────────────────────────────────
 FROM php:8.4-fpm AS production
