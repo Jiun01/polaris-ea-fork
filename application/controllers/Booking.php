@@ -81,6 +81,35 @@ class Booking extends EA_Controller
     }
 
     /**
+     * Polaris tenant slug entry-point (S3-5).
+     *
+     * Resolves the slug to a tenant_id via ea_polaris_tenants (S3-6), sets
+     * the tenant context, then delegates to index() for the standard booking
+     * page render. Invalid or suspended slugs produce a branded 404.
+     *
+     * URL: /book/{slug}  →  routes.php maps to  booking/slug/$1
+     */
+    public function slug(string $slug): void
+    {
+        // Validate slug format before touching the DB.
+        if (!preg_match('/^[a-z][a-z0-9-]{0,98}$/', $slug)) {
+            show_404();
+
+            return;
+        }
+
+        try {
+            MY_Controller::from_slug($slug);
+        } catch (RuntimeException) {
+            show_404();
+
+            return;
+        }
+
+        $this->index();
+    }
+
+    /**
      * Render the booking page and display the selected appointment.
      *
      * This method will call the "index" callback to handle the page rendering.
