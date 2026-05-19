@@ -33,7 +33,23 @@ JWT secret, Turnstile keys, and CORS origin are sourced from environment variabl
 
 ## Documentation
 
-Operational + maintenance docs live in the Polaris SSOT, not this repo:
+### This Repository (Polaris EA Fork)
+
+Architectural + developer documentation:
+
+| Doc | Path |
+|---|---|
+| **Codemaps INDEX** (entry point) | `docs/CODEMAPS/INDEX.md` |
+| Multi-tenancy architecture | `docs/CODEMAPS/multi_tenancy.md` |
+| Bearer JWT authentication | `docs/CODEMAPS/authentication.md` |
+| Public booking (/book/{slug}) | `docs/CODEMAPS/public_booking.md` |
+| Docker multi-stage build | `docs/CODEMAPS/docker_build.md` |
+| Playwright E2E test suite | `docs/CODEMAPS/e2e_testing.md` |
+| Developer setup | `.github/CONTRIBUTING.md` |
+
+### Polaris Monorepo (External)
+
+Operational + maintenance docs live in the Polaris SSOT:
 
 | Doc | Path |
 |---|---|
