@@ -14,6 +14,15 @@
 
 set -euo pipefail
 
+# Load .env from repo root if present (picks up GITHUB_TOKEN etc).
+ENV_FILE="$(git rev-parse --show-toplevel 2>/dev/null)/.env"
+if [[ -f "$ENV_FILE" ]]; then
+    set -a
+    # shellcheck source=/dev/null
+    source "$ENV_FILE"
+    set +a
+fi
+
 IMAGE="ghcr.io/jiun01/polaris-ea"
 VERSION="${TAG:-$(git describe --tags --match 'polaris/v*' --abbrev=0 2>/dev/null || echo 'polaris/v1.5.2-r1')}"
 # Strip the polaris/ prefix for the Docker tag.
@@ -28,6 +37,14 @@ while [[ $# -gt 0 ]]; do
     esac
     shift
 done
+
+if [[ "$PUSH" == "true" ]]; then
+    if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+        echo "Error: GITHUB_TOKEN is not set. Add it to .env or export it." >&2
+        exit 1
+    fi
+    echo "$GITHUB_TOKEN" | docker login ghcr.io -u jiun01 --password-stdin
+fi
 
 echo "▶ Building ${IMAGE}:${DOCKER_TAG}"
 
