@@ -100,7 +100,7 @@ $autoload['helper'] = [
 |
 */
 
-$autoload['config'] = ['app', 'google', 'email'];
+$autoload['config'] = ['app', 'google', 'email', 'polaris'];
 
 /*
 | -------------------------------------------------------------------
