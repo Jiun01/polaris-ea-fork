@@ -46,6 +46,11 @@ class BearerAuthHook
             return;
         }
 
+        // Internal Polaris-to-EA endpoints use HMAC-SHA256, not Bearer JWT.
+        if (str_starts_with($raw_uri, 'api/v1/internal/')) {
+            return;
+        }
+
         $token = $this->extract_bearer_token();
 
         if ($token === null) {
