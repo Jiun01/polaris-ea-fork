@@ -1,7 +1,9 @@
 # Authentication Codemap
 
-**Last Updated:** 2026-05-20
-**Entry Points:** BearerAuthHook::validate(), MY_Controller::from_bearer()
+<!-- Generated: 2026-05-26 | Files scanned: 8 | Token estimate: ~900 -->
+
+**Last Updated:** 2026-05-26
+**Entry Points:** BearerAuthHook::validate(), MY_Controller::from_bearer(), EA_Controller::__construct() (session path)
 
 ## Architecture
 
@@ -46,8 +48,10 @@
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **BearerAuthHook** | `application/hooks/BearerAuthHook.php` | CI3 pre_controller hook; validates Bearer token on /api/v1/* routes |
-| **MY_Controller** | `application/core/MY_Controller.php` | Static tenant context holder + JWT decoder |
+| **BearerAuthHook** | `application/hooks/BearerAuthHook.php` | pre_controller hook; validates Bearer JWT on /api/v1/* (skips /api/v1/internal/*) |
+| **MY_Controller** | `application/core/MY_Controller.php` | Static context holder; from_bearer(), resolve_session_tenant() |
+| **EA_Controller** | `application/core/EA_Controller.php` | Extends MY_Controller; calls resolve_session_tenant() at constructor start |
+| **Accounts** | `application/libraries/Accounts.php` | check_login() sets tenant context from user_settings.tenant_id at login time |
 | **JWT Library** | `vendor/firebase/php-jwt` | HS256 decode + claim extraction |
 
 ## Token Validation Flow
@@ -137,13 +141,44 @@ $config['polaris_jwt_audience'] = 'ea-fork';
 ### Hook Registration (`application/config/hooks.php`)
 
 ```php
-$hook['pre_controller'] = [
+$hook['pre_controller'][] = [
     'class'    => 'BearerAuthHook',
     'function' => 'validate',
     'filename' => 'BearerAuthHook.php',
     'filepath' => 'hooks',
 ];
+// Note: SessionTenantHook (post_controller_constructor) was removed.
+// Session-based tenant resolution now happens in EA_Controller::__construct().
 ```
+
+### Internal API Route Bypass
+
+`/api/v1/internal/*` routes skip Bearer JWT — they use HMAC-SHA256 (`POLARIS_WEBHOOK_SECRET`) instead. BearerAuthHook detects the prefix and returns early:
+
+```php
+if (str_starts_with($raw_uri, 'api/v1/internal/')) {
+    return; // HMAC auth handled by Internal_api_v1
+}
+```
+
+Current internal routes:
+- `POST /api/v1/internal/tenants/sync` → `Internal_api_v1::tenants_sync`
+
+### Admin Session Auth (EA_Controller)
+
+For backend routes (`/calendar`, `/services`, `/business_settings`, etc.) the tenant is resolved from the PHP session:
+
+```
+EA_Controller::__construct()
+  └─ if empty(self::$tenant_id):
+       MY_Controller::resolve_session_tenant()
+         ├─ $CI->load->is_loaded('session')  [not isset — CI3 has no __isset]
+         ├─ session->userdata('user_id')
+         ├─ SELECT tenant_id FROM users WHERE id = ?
+         └─ set_tenant_context(tenant_id)
+```
+
+This runs before `ensure_user_exists()`, `load->library('accounts')`, and any model call in child controllers.
 
 ## Clock Skew Tolerance
 
