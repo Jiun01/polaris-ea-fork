@@ -106,6 +106,11 @@ class Booking extends EA_Controller
             return;
         }
 
+        // Persist the resolved tenant_id in the CI session so the AJAX calls
+        // fired by the booking wizard (get_unavailable_dates, etc.) can resolve
+        // the tenant context without the slug being present in the URL.
+        $this->session->set_userdata('booking_tenant_id', self::$tenant_id);
+
         $this->index();
     }
 
