@@ -9,6 +9,15 @@ INSERT INTO ea_polaris_tenants (tenant_id, slug, status) VALUES
   (@B_UUID, 'tenant-b',   'active')
 ON DUPLICATE KEY UPDATE slug=VALUES(slug), status=VALUES(status);
 
+-- EA settings per tenant (required by GlobalVariables / Booking page JS init).
+-- Copies installer-seeded NULL-tenant defaults into each tenant row.
+-- INSERT IGNORE: safe to run multiple times.
+INSERT IGNORE INTO ea_settings (tenant_id, name, value)
+  SELECT @A_UUID, name, value FROM ea_settings WHERE tenant_id IS NULL;
+
+INSERT IGNORE INTO ea_settings (tenant_id, name, value)
+  SELECT @B_UUID, name, value FROM ea_settings WHERE tenant_id IS NULL;
+
 -- Roles (global, already seeded by EA installer)
 SET @PROVIDER_ROLE = (SELECT id FROM ea_roles WHERE slug='provider' LIMIT 1);
 SET @CUSTOMER_ROLE = (SELECT id FROM ea_roles WHERE slug='customer' LIMIT 1);
@@ -38,10 +47,15 @@ VALUES (@B_UUID, 'B-Only-Service', 60, 0, 'MYR', 'Should never leak to A', '', '
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 SET @B_SERVICE_ID = LAST_INSERT_ID();
 
+-- Working plan: Mon-Fri 09:00-18:00, lunch break 13:00-14:00, weekends off.
+-- Required by Availability library; NULL working_plan = no available hours shown.
+SET @WORKING_PLAN = '{"sunday":null,"monday":{"start":"09:00","end":"18:00","breaks":[{"start":"13:00","end":"14:00"}]},"tuesday":{"start":"09:00","end":"18:00","breaks":[{"start":"13:00","end":"14:00"}]},"wednesday":{"start":"09:00","end":"18:00","breaks":[{"start":"13:00","end":"14:00"}]},"thursday":{"start":"09:00","end":"18:00","breaks":[{"start":"13:00","end":"14:00"}]},"friday":{"start":"09:00","end":"18:00","breaks":[{"start":"13:00","end":"14:00"}]},"saturday":null}';
+
 -- user_settings for providers (required by Providers_model::get_settings)
-INSERT INTO ea_user_settings (id_users, tenant_id, username)
-VALUES (@A_PROVIDER_ID, @A_UUID, 'alice'), (@B_PROVIDER_ID, @B_UUID, 'bob')
-ON DUPLICATE KEY UPDATE username=VALUES(username);
+INSERT INTO ea_user_settings (id_users, tenant_id, username, working_plan)
+VALUES (@A_PROVIDER_ID, @A_UUID, 'alice', @WORKING_PLAN),
+       (@B_PROVIDER_ID, @B_UUID, 'bob',   @WORKING_PLAN)
+ON DUPLICATE KEY UPDATE username=VALUES(username), working_plan=VALUES(working_plan);
 
 -- Link provider to service
 INSERT IGNORE INTO ea_services_providers (id_users, id_services) VALUES (@A_PROVIDER_ID, @A_SERVICE_ID);
