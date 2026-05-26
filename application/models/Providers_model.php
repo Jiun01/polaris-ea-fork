@@ -296,7 +296,7 @@ class Providers_model extends MY_Model
      *
      * @throws RuntimeException|Exception
      */
-    protected function insert(array $provider): int
+    public function insert(array $provider): int
     {
         $provider['create_datetime'] = date('Y-m-d H:i:s');
         $provider['update_datetime'] = date('Y-m-d H:i:s');
@@ -386,7 +386,7 @@ class Providers_model extends MY_Model
      *
      * @throws RuntimeException|Exception
      */
-    protected function update(array $provider): int
+    public function update(array $provider): int
     {
         $this->assert_tenant();
         $provider['update_datetime'] = date('Y-m-d H:i:s');

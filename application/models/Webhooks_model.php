@@ -86,7 +86,7 @@ class Webhooks_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $webhook): int
+    public function insert(array $webhook): int
     {
         $webhook['create_datetime'] = date('Y-m-d H:i:s');
         $webhook['update_datetime'] = date('Y-m-d H:i:s');
@@ -108,7 +108,7 @@ class Webhooks_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $webhook): int
+    public function update(array $webhook): int
     {
         $this->assert_tenant();
         $webhook['update_datetime'] = date('Y-m-d H:i:s');

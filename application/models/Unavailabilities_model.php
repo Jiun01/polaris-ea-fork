@@ -179,7 +179,7 @@ class Unavailabilities_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $unavailability): int
+    public function insert(array $unavailability): int
     {
         $unavailability['book_datetime'] = date('Y-m-d H:i:s');
         $unavailability['create_datetime'] = date('Y-m-d H:i:s');
@@ -204,7 +204,7 @@ class Unavailabilities_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $unavailability): int
+    public function update(array $unavailability): int
     {
         $this->assert_tenant();
         $unavailability['update_datetime'] = date('Y-m-d H:i:s');

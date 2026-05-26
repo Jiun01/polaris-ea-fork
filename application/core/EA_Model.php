@@ -242,3 +242,11 @@ class EA_Model extends CI_Model
         return implode(', ', $quoted_parts);
     }
 }
+
+// CI3 uses subclass_prefix='EA_', so it loads EA_Model.php as its model base
+// extension but never loads MY_Model.php automatically. Bootstrapping MY_Model
+// here ensures it is always available when individual tenant-scoped models are
+// loaded. PHP's require_once prevents re-entry if MY_Model.php was the caller.
+if (!class_exists('MY_Model', false) && defined('APPPATH') && file_exists(APPPATH . 'core/MY_Model.php')) {
+    require_once APPPATH . 'core/MY_Model.php';
+}

@@ -4,14 +4,21 @@
  * Polaris fork — tenant isolation model base (S3-4).
  *
  * Extends EA_Model with three protected helpers (assert_tenant,
- * apply_tenant_where, inject_tenant_id) and five generic CRUD methods that
- * automatically scope every query to the current tenant.
+ * apply_tenant_where, inject_tenant_id) that every tenant-scoped model uses
+ * to restrict queries to the current tenant.
  *
- * Subclasses set protected string $table and override individual CRUD methods
- * when they need richer behaviour (cascades, eager loading, etc.).
+ * Generic find/get_where/delete are provided as fallbacks; each EA model
+ * provides its own insert/update with richer logic (JOINs, settings, etc.)
+ * so those are intentionally absent here to avoid PHP 8 signature conflicts.
  * ---------------------------------------------------------------------------- */
 
-if (!class_exists('TenantContextMissingException')) {
+// EA_Model is loaded by CI3's Loader via subclass_prefix='EA_', which triggers
+// the require at the bottom of EA_Model.php that loads this file. When this
+// file is re-entered through that path, the class_exists guards below are no-ops.
+if (!class_exists('MY_Controller', false)) {
+    require_once __DIR__ . '/MY_Controller.php';
+}
+if (!class_exists('TenantContextMissingException', false)) {
     require_once __DIR__ . '/TenantContextMissingException.php';
 }
 
@@ -20,7 +27,7 @@ class MY_Model extends EA_Model
     protected string $table = '';
 
     // -------------------------------------------------------------------------
-    // Protected helpers — called by every tenant-scoped CRUD method
+    // Protected helpers — used by every tenant-scoped model method
     // -------------------------------------------------------------------------
 
     protected function assert_tenant(): void
@@ -46,7 +53,7 @@ class MY_Model extends EA_Model
     }
 
     // -------------------------------------------------------------------------
-    // Generic CRUD — subclasses override these with model-specific logic
+    // Generic CRUD fallbacks — models with custom insert/update omit those
     // -------------------------------------------------------------------------
 
     public function find(int $id): ?array
@@ -64,23 +71,6 @@ class MY_Model extends EA_Model
     {
         $where = $this->apply_tenant_where($where);
         return $this->db->where($where)->get($this->table)->result_array();
-    }
-
-    public function insert(array $data): int
-    {
-        $data = $this->inject_tenant_id($data);
-        $this->db->insert($this->table, $data);
-        return (int) $this->db->insert_id();
-    }
-
-    public function update(int $id, array $data): void
-    {
-        $this->assert_tenant();
-        unset($data['tenant_id']); // prevent caller from spoofing the tenant
-        $this->db
-            ->where('id', $id)
-            ->where('tenant_id', MY_Controller::$tenant_id)
-            ->update($this->table, $data);
     }
 
     public function delete(int $id): void

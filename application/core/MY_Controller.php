@@ -46,11 +46,12 @@ class MY_Controller extends CI_Controller
      */
     public static function from_bearer(string $token): void
     {
-        $CI = get_instance();
-
-        $secret   = (string) $CI->config->item('polaris_jwt_secret');
-        $issuer   = (string) ($CI->config->item('polaris_jwt_issuer')   ?? 'polaris');
-        $audience = (string) ($CI->config->item('polaris_jwt_audience') ?? 'ea-fork');
+        // get_instance() is null at pre_controller time (CI superobject not yet
+        // assigned to the static $_CI slot). Read env vars directly — polaris.php
+        // reads these same vars, so no config-layer duplication.
+        $secret   = (string) (getenv('POLARIS_EA_JWT_SECRET') ?: '');
+        $issuer   = 'polaris';
+        $audience = 'ea-fork';
 
         if ($secret === '') {
             // Misconfiguration — fail closed rather than letting through.

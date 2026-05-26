@@ -93,7 +93,7 @@ class Service_categories_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $service_category): int
+    public function insert(array $service_category): int
     {
         $service_category['create_datetime'] = date('Y-m-d H:i:s');
         $service_category['update_datetime'] = date('Y-m-d H:i:s');
@@ -115,7 +115,7 @@ class Service_categories_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $service_category): int
+    public function update(array $service_category): int
     {
         $this->assert_tenant();
         $service_category['update_datetime'] = date('Y-m-d H:i:s');

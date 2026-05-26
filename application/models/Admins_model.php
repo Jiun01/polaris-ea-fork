@@ -261,7 +261,7 @@ class Admins_model extends MY_Model
      *
      * @throws RuntimeException|Exception
      */
-    protected function insert(array $admin): int
+    public function insert(array $admin): int
     {
         $admin['id_roles'] = $this->get_admin_role_id();
 
@@ -336,7 +336,7 @@ class Admins_model extends MY_Model
      * @throws RuntimeException
      * @throws Exception
      */
-    protected function update(array $admin): int
+    public function update(array $admin): int
     {
         $this->assert_tenant();
         $settings = $admin['settings'];

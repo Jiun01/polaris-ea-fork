@@ -213,7 +213,7 @@ class Appointments_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $appointment): int
+    public function insert(array $appointment): int
     {
         $appointment['book_datetime'] = date('Y-m-d H:i:s');
         $appointment['create_datetime'] = date('Y-m-d H:i:s');
@@ -237,7 +237,7 @@ class Appointments_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $appointment): int
+    public function update(array $appointment): int
     {
         $this->assert_tenant();
         $appointment['update_datetime'] = date('Y-m-d H:i:s');

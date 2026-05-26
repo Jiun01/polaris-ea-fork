@@ -70,7 +70,7 @@ class Consents_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $consent): int
+    public function insert(array $consent): int
     {
         $consent['create_datetime'] = date('Y-m-d H:i:s');
         $consent['update_datetime'] = date('Y-m-d H:i:s');
@@ -92,7 +92,7 @@ class Consents_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $consent): int
+    public function update(array $consent): int
     {
         $this->assert_tenant();
         $consent['update_datetime'] = date('Y-m-d H:i:s');
