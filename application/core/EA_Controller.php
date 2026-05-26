@@ -1,5 +1,9 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 
+// CI3's autoloader does not chain parent classes for files in application/core/,
+// so explicitly require MY_Controller before declaring EA_Controller.
+require_once APPPATH . 'core/MY_Controller.php';
+
 /* ----------------------------------------------------------------------------
  * Easy!Appointments - Online Appointment Scheduler
  *
@@ -70,7 +74,7 @@
  * @property Timezones $timezones
  * @property Webhooks_client $webhooks_client
  */
-class EA_Controller extends CI_Controller
+class EA_Controller extends MY_Controller
 {
     /**
      * EA_Controller constructor.
@@ -78,6 +82,15 @@ class EA_Controller extends CI_Controller
     public function __construct()
     {
         parent::__construct();
+
+        // Resolve tenant context from the session as early as possible so any
+        // model loaded later in this constructor (or in the controller's own
+        // constructor) sees a populated MY_Controller::$tenant_id.
+        // API requests (BearerAuthHook) and the public booking page set the
+        // context before EA_Controller runs, so we only resolve when empty.
+        if (empty(self::$tenant_id)) {
+            self::resolve_session_tenant();
+        }
 
         $this->load->library('accounts');
 

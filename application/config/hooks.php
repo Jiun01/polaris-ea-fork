@@ -22,5 +22,9 @@ $hook['pre_controller'][] = [
     'params'   => [],
 ];
 
+// Note: session-based tenant resolution for backend routes happens directly in
+// EA_Controller::__construct() via MY_Controller::resolve_session_tenant(),
+// so no separate hook is required.
+
 /* End of file hooks.php */
 /* Location: ./application/config/hooks.php */
