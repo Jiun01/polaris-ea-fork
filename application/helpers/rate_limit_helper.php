@@ -36,7 +36,17 @@ if (!function_exists('rate_limit')) {
             return;
         }
 
-        $CI->load->driver('cache', ['adapter' => 'file']);
+        // Guard: load->driver() must only be called once per request.
+        // CI3's CI_Cache::is_supported() uses a static $support array — if a
+        // second load->driver() call creates a fresh CI_Cache instance, the
+        // static flag tells is_supported() the adapter is already verified and
+        // it skips load_driver(), leaving $this->file uninitialised.  Calling
+        // get() then crashes with "Call to a member function get() on null".
+        static $cache_driver_loaded = false;
+        if (!$cache_driver_loaded) {
+            $CI->load->driver('cache', ['adapter' => 'file']);
+            $cache_driver_loaded = true;
+        }
 
         $cache_key = str_replace(':', '', 'rate_limit_key_' . $ip);
 
