@@ -167,6 +167,8 @@ $route['api/v1/settings/(:any)']['put'] = 'api/v1/settings_api_v1/update/$1';
 
 $route['api/v1/availabilities']['get'] = 'api/v1/availabilities_api_v1/get';
 
+$route['api/v1/internal/tenants/sync']['post'] = 'api/v1/internal_api_v1/tenants_sync';
+
 /*
 | -------------------------------------------------------------------------
 | CUSTOM ROUTING
