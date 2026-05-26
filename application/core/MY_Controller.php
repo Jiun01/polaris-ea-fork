@@ -124,20 +124,31 @@ class MY_Controller extends CI_Controller
 
         $user_id = $session->userdata('user_id');
 
-        if (empty($user_id)) {
+        if (!empty($user_id)) {
+            // Authenticated backend path: look up the tenant from the users table.
+            $row = $CI->db
+                ->select('tenant_id')
+                ->from('users')
+                ->where('id', (int) $user_id)
+                ->limit(1)
+                ->get()
+                ->row_array();
+
+            if (!empty($row['tenant_id'])) {
+                self::set_tenant_context($row['tenant_id']);
+            }
+
             return;
         }
 
-        $row = $CI->db
-            ->select('tenant_id')
-            ->from('users')
-            ->where('id', (int) $user_id)
-            ->limit(1)
-            ->get()
-            ->row_array();
+        // Public booking path: Booking::slug() stores the resolved tenant_id in
+        // the session so subsequent AJAX requests (get_unavailable_dates, etc.)
+        // on the same booking session can resolve the context without re-parsing
+        // the slug from the URL.
+        $booking_tenant_id = $session->userdata('booking_tenant_id');
 
-        if (!empty($row['tenant_id'])) {
-            self::set_tenant_context($row['tenant_id']);
+        if (!empty($booking_tenant_id)) {
+            self::set_tenant_context($booking_tenant_id);
         }
     }
 
