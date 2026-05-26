@@ -10,13 +10,13 @@ INSERT INTO ea_polaris_tenants (tenant_id, slug, status) VALUES
 ON DUPLICATE KEY UPDATE slug=VALUES(slug), status=VALUES(status);
 
 -- EA settings per tenant (required by GlobalVariables / Booking page JS init).
--- Copies installer-seeded NULL-tenant defaults into each tenant row.
+-- Source: the installer seeds a row with tenant_id='' (empty string, not NULL).
 -- INSERT IGNORE: safe to run multiple times.
 INSERT IGNORE INTO ea_settings (tenant_id, name, value)
-  SELECT @A_UUID, name, value FROM ea_settings WHERE tenant_id IS NULL;
+  SELECT @A_UUID, name, value FROM ea_settings WHERE tenant_id = '';
 
 INSERT IGNORE INTO ea_settings (tenant_id, name, value)
-  SELECT @B_UUID, name, value FROM ea_settings WHERE tenant_id IS NULL;
+  SELECT @B_UUID, name, value FROM ea_settings WHERE tenant_id = '';
 
 -- Roles (global, already seeded by EA installer)
 SET @PROVIDER_ROLE = (SELECT id FROM ea_roles WHERE slug='provider' LIMIT 1);
