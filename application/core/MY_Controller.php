@@ -103,6 +103,45 @@ class MY_Controller extends CI_Controller
     }
 
     /**
+     * Resolve the tenant context from the logged-in session's user_id.
+     *
+     * Called from EA_Controller::__construct() for backend (non-API, non-booking)
+     * requests. Safe to call when no session exists (pre-login pages) — it returns
+     * silently and leaves the tenant context unset, which keeps Login/Installation
+     * reachable.
+     */
+    public static function resolve_session_tenant(): void
+    {
+        $CI = &get_instance();
+
+        // isset() on CI3 magic properties always returns false (no __isset), so
+        // use is_a() against the loaded object directly rather than isset($CI->session).
+        $session = $CI->load->is_loaded('session') ? $CI->session : null;
+
+        if ($session === null) {
+            return;
+        }
+
+        $user_id = $session->userdata('user_id');
+
+        if (empty($user_id)) {
+            return;
+        }
+
+        $row = $CI->db
+            ->select('tenant_id')
+            ->from('users')
+            ->where('id', (int) $user_id)
+            ->limit(1)
+            ->get()
+            ->row_array();
+
+        if (!empty($row['tenant_id'])) {
+            self::set_tenant_context($row['tenant_id']);
+        }
+    }
+
+    /**
      * Resolve a tenant slug via the ea_polaris_tenants shadow table (S3-6),
      * then set the tenant context.
      *
