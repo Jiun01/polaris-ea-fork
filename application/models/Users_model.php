@@ -18,7 +18,7 @@
  *
  * @package Models
  */
-class Users_model extends EA_Model
+class Users_model extends MY_Model
 {
     /**
      * @var array
@@ -81,7 +81,7 @@ class Users_model extends EA_Model
     {
         // If a user ID is provided then check whether the record really exists in the database.
         if (!empty($user['id'])) {
-            $count = $this->db->get_where('users', ['id' => $user['id']])->num_rows();
+            $count = $this->db->where('id', $user['id'])->where('tenant_id', MY_Controller::$tenant_id)->get('users')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -117,6 +117,8 @@ class Users_model extends EA_Model
 
         $settings = $user['settings'];
         unset($user['settings']);
+
+        $user = $this->inject_tenant_id($user); // Polaris: tenant-scoped
 
         if (!$this->db->insert('users', $user)) {
             throw new RuntimeException('Could not insert user.');
@@ -182,10 +184,12 @@ class Users_model extends EA_Model
      */
     protected function update(array $user): int
     {
+        $this->assert_tenant();
         $user['update_datetime'] = date('Y-m-d H:i:s');
 
         $settings = $user['settings'];
         unset($user['settings']);
+        unset($user['tenant_id']); // prevent spoof
 
         if (isset($settings['password'])) {
             $existing_settings = $this->db->get_where('user_settings', ['id_users' => $user['id']])->row_array();
@@ -197,9 +201,7 @@ class Users_model extends EA_Model
             $settings['password'] = hash_password($existing_settings['salt'], $settings['password']);
         }
 
-        if (!$this->db->update('users', $user, ['id' => $user['id']])) {
-            throw new RuntimeException('Could not update user.');
-        }
+        $this->db->where('id', $user['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('users', $user); // Polaris: tenant-scoped
 
         $this->set_settings($user['id'], $settings);
 
@@ -215,7 +217,8 @@ class Users_model extends EA_Model
      */
     public function delete(int $user_id): void
     {
-        $this->db->delete('users', ['id' => $user_id]);
+        $this->assert_tenant();
+        $this->db->where('id', $user_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('users'); // Polaris: tenant-scoped
     }
 
     /**
@@ -229,7 +232,8 @@ class Users_model extends EA_Model
      */
     public function find(int $user_id): array
     {
-        $user = $this->db->get_where('users', ['id' => $user_id])->row_array();
+        $this->assert_tenant();
+        $user = $this->db->where('id', $user_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users')->row_array(); // Polaris: tenant-scoped
 
         if (!$user) {
             throw new InvalidArgumentException('The provided user ID was not found in the database: ' . $user_id);
@@ -279,7 +283,7 @@ class Users_model extends EA_Model
         }
 
         // Check whether the user exists.
-        $query = $this->db->get_where('users', ['id' => $user_id]);
+        $query = $this->db->where('id', $user_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException('The provided user ID was not found in the database: ' . $user_id);
@@ -323,7 +327,8 @@ class Users_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
-        return $this->db->from('users');
+        $this->assert_tenant();
+        return $this->db->from('users')->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
     }
 
     /**
@@ -338,9 +343,12 @@ class Users_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
+
         $users = $this->db
             ->select()
             ->from('users')
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->like('first_name', $keyword)
             ->or_like('last_name', $keyword)
@@ -383,6 +391,8 @@ class Users_model extends EA_Model
         ?int $offset = null,
         ?string $order_by = null,
     ): array {
+        $this->assert_tenant();
+
         if ($where !== null) {
             $this->db->where($where);
         }
@@ -391,7 +401,7 @@ class Users_model extends EA_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $users = $this->db->get('users', $limit, $offset)->result_array();
+        $users = $this->db->where('tenant_id', MY_Controller::$tenant_id)->get('users', $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($users as &$user) {
             $this->cast($user);

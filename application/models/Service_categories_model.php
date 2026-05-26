@@ -18,7 +18,7 @@
  *
  * @package Models
  */
-class Service_categories_model extends EA_Model
+class Service_categories_model extends MY_Model
 {
     /**
      * @var array
@@ -67,7 +67,7 @@ class Service_categories_model extends EA_Model
     {
         // If a service-category ID is provided then check whether the record really exists in the database.
         if (!empty($service_category['id'])) {
-            $count = $this->db->get_where('service_categories', ['id' => $service_category['id']])->num_rows();
+            $count = $this->db->where('id', $service_category['id'])->where('tenant_id', MY_Controller::$tenant_id)->get('service_categories')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -97,6 +97,7 @@ class Service_categories_model extends EA_Model
     {
         $service_category['create_datetime'] = date('Y-m-d H:i:s');
         $service_category['update_datetime'] = date('Y-m-d H:i:s');
+        $service_category = $this->inject_tenant_id($service_category); // Polaris: tenant-scoped
 
         if (!$this->db->insert('service_categories', $service_category)) {
             throw new RuntimeException('Could not insert service-category.');
@@ -116,11 +117,10 @@ class Service_categories_model extends EA_Model
      */
     protected function update(array $service_category): int
     {
+        $this->assert_tenant();
         $service_category['update_datetime'] = date('Y-m-d H:i:s');
-
-        if (!$this->db->update('service_categories', $service_category, ['id' => $service_category['id']])) {
-            throw new RuntimeException('Could not update service categories.');
-        }
+        unset($service_category['tenant_id']); // prevent spoof
+        $this->db->where('id', $service_category['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('service_categories', $service_category); // Polaris: tenant-scoped
 
         return $service_category['id'];
     }
@@ -134,7 +134,8 @@ class Service_categories_model extends EA_Model
      */
     public function delete(int $service_category_id): void
     {
-        $this->db->delete('service_categories', ['id' => $service_category_id]);
+        $this->assert_tenant();
+        $this->db->where('id', $service_category_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('service_categories'); // Polaris: tenant-scoped
     }
 
     /**
@@ -148,7 +149,8 @@ class Service_categories_model extends EA_Model
      */
     public function find(int $service_category_id): array
     {
-        $service_category = $this->db->get_where('service_categories', ['id' => $service_category_id])->row_array();
+        $this->assert_tenant();
+        $service_category = $this->db->where('id', $service_category_id)->where('tenant_id', MY_Controller::$tenant_id)->get('service_categories')->row_array(); // Polaris: tenant-scoped
 
         if (!$service_category) {
             throw new InvalidArgumentException(
@@ -181,8 +183,8 @@ class Service_categories_model extends EA_Model
             throw new InvalidArgumentException('The service-category ID argument cannot be empty.');
         }
 
-        // Check whether the service exists.
-        $query = $this->db->get_where('service_categories', ['id' => $service_category_id]);
+        // Check whether the service category exists.
+        $query = $this->db->where('id', $service_category_id)->where('tenant_id', MY_Controller::$tenant_id)->get('service_categories'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException(
@@ -211,7 +213,8 @@ class Service_categories_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
-        return $this->db->from('service_categories');
+        $this->assert_tenant();
+        return $this->db->from('service_categories')->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
     }
 
     /**
@@ -226,9 +229,12 @@ class Service_categories_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
+
         $service_categories = $this->db
             ->select()
             ->from('service_categories')
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->like('name', $keyword)
             ->or_like('description', $keyword)
@@ -270,7 +276,8 @@ class Service_categories_model extends EA_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $service_categories = $this->db->get('service_categories', $limit, $offset)->result_array();
+        $this->assert_tenant();
+        $service_categories = $this->db->where('tenant_id', MY_Controller::$tenant_id)->get('service_categories', $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($service_categories as &$service_category) {
             $this->cast($service_category);

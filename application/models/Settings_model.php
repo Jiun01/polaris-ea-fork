@@ -18,7 +18,7 @@
  *
  * @package Models
  */
-class Settings_model extends EA_Model
+class Settings_model extends MY_Model
 {
     /**
      * @var array
@@ -66,7 +66,7 @@ class Settings_model extends EA_Model
     {
         // If a setting ID is provided then check whether the record really exists in the database.
         if (!empty($setting['id'])) {
-            $count = $this->db->get_where('settings', ['id' => $setting['id']])->num_rows();
+            $count = $this->db->where('id', $setting['id'])->where('tenant_id', MY_Controller::$tenant_id)->get('settings')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -94,6 +94,7 @@ class Settings_model extends EA_Model
     {
         $setting['create_datetime'] = date('Y-m-d H:i:s');
         $setting['update_datetime'] = date('Y-m-d H:i:s');
+        $setting = $this->inject_tenant_id($setting); // Polaris: tenant-scoped
 
         if (!$this->db->insert('settings', $setting)) {
             throw new RuntimeException('Could not insert setting.');
@@ -113,11 +114,10 @@ class Settings_model extends EA_Model
      */
     protected function update(array $setting): int
     {
+        $this->assert_tenant();
         $setting['update_datetime'] = date('Y-m-d H:i:s');
-
-        if (!$this->db->update('settings', $setting, ['id' => $setting['id']])) {
-            throw new RuntimeException('Could not update setting.');
-        }
+        unset($setting['tenant_id']); // prevent spoof
+        $this->db->where('id', $setting['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('settings', $setting); // Polaris: tenant-scoped
 
         return $setting['id'];
     }
@@ -131,7 +131,8 @@ class Settings_model extends EA_Model
      */
     public function delete(int $setting_id): void
     {
-        $this->db->delete('settings', ['id' => $setting_id]);
+        $this->assert_tenant();
+        $this->db->where('id', $setting_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('settings'); // Polaris: tenant-scoped
     }
 
     /**
@@ -145,7 +146,8 @@ class Settings_model extends EA_Model
      */
     public function find(int $setting_id): array
     {
-        $setting = $this->db->get_where('settings', ['id' => $setting_id])->row_array();
+        $this->assert_tenant();
+        $setting = $this->db->where('id', $setting_id)->where('tenant_id', MY_Controller::$tenant_id)->get('settings')->row_array(); // Polaris: tenant-scoped
 
         if (!$setting) {
             throw new InvalidArgumentException('The provided setting ID was not found in the database: ' . $setting_id);
@@ -177,7 +179,7 @@ class Settings_model extends EA_Model
         }
 
         // Check whether the setting exists.
-        $query = $this->db->get_where('settings', ['id' => $setting_id]);
+        $query = $this->db->where('id', $setting_id)->where('tenant_id', MY_Controller::$tenant_id)->get('settings'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException('The provided setting ID was not found in the database: ' . $setting_id);
@@ -202,7 +204,8 @@ class Settings_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
-        return $this->db->from('settings');
+        $this->assert_tenant();
+        return $this->db->from('settings')->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
     }
 
     /**
@@ -217,9 +220,12 @@ class Settings_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
+
         $settings = $this->db
             ->select()
             ->from('settings')
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->like('name', $keyword)
             ->or_like('value', $keyword)
@@ -261,7 +267,8 @@ class Settings_model extends EA_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $settings = $this->db->get('settings', $limit, $offset)->result_array();
+        $this->assert_tenant();
+        $settings = $this->db->where('tenant_id', MY_Controller::$tenant_id)->get('settings', $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($settings as &$setting) {
             $this->cast($setting);

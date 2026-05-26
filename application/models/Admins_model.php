@@ -18,7 +18,7 @@
  *
  * @package Models
  */
-class Admins_model extends EA_Model
+class Admins_model extends MY_Model
 {
     /**
      * @var array
@@ -81,7 +81,7 @@ class Admins_model extends EA_Model
     {
         // If an admin ID is provided then check whether the record really exists in the database.
         if (!empty($admin['id'])) {
-            $count = $this->db->get_where('users', ['id' => $admin['id']])->num_rows();
+            $count = $this->db->where('id', $admin['id'])->where('tenant_id', MY_Controller::$tenant_id)->get('users')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -149,6 +149,7 @@ class Admins_model extends EA_Model
             ->join('roles', 'roles.id = users.id_roles', 'inner')
             ->where('roles.slug', DB_SLUG_ADMIN)
             ->where('users.email', $admin['email'])
+            ->where('users.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->where('users.id !=', $admin_id)
             ->get()
             ->num_rows();
@@ -198,6 +199,7 @@ class Admins_model extends EA_Model
         ?int $offset = null,
         ?string $order_by = null,
     ): array {
+        $this->assert_tenant();
         $role_id = $this->get_admin_role_id();
 
         if ($where !== null) {
@@ -208,7 +210,7 @@ class Admins_model extends EA_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $admins = $this->db->get_where('users', ['id_roles' => $role_id], $limit, $offset)->result_array();
+        $admins = $this->db->where('tenant_id', MY_Controller::$tenant_id)->get_where('users', ['id_roles' => $role_id], $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($admins as &$admin) {
             $this->cast($admin);
@@ -269,6 +271,7 @@ class Admins_model extends EA_Model
 
         $admin['create_datetime'] = date('Y-m-d H:i:s');
         $admin['update_datetime'] = date('Y-m-d H:i:s');
+        $admin = $this->inject_tenant_id($admin); // Polaris: tenant-scoped
 
         if (!$this->db->insert('users', $admin)) {
             throw new RuntimeException('Could not insert admin.');
@@ -335,11 +338,13 @@ class Admins_model extends EA_Model
      */
     protected function update(array $admin): int
     {
+        $this->assert_tenant();
         $settings = $admin['settings'];
 
         $settings['id_users'] = $admin['id'];
 
         unset($admin['settings']);
+        unset($admin['tenant_id']); // prevent spoof
 
         if (!empty($settings['password'])) {
             $existing_settings = $this->db->get_where('user_settings', ['id_users' => $admin['id']])->row_array();
@@ -357,9 +362,7 @@ class Admins_model extends EA_Model
 
         $admin['update_datetime'] = date('Y-m-d H:i:s');
 
-        if (!$this->db->update('users', $admin, ['id' => $admin['id']])) {
-            throw new RuntimeException('Could not update admin.');
-        }
+        $this->db->where('id', $admin['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('users', $admin); // Polaris: tenant-scoped
 
         $this->set_settings($admin['id'], $settings);
 
@@ -375,15 +378,16 @@ class Admins_model extends EA_Model
      */
     public function delete(int $admin_id): void
     {
+        $this->assert_tenant();
         $role_id = $this->get_admin_role_id();
 
-        $count = $this->db->get_where('users', ['id_roles' => $role_id])->num_rows();
+        $count = $this->db->where('id_roles', $role_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users')->num_rows(); // Polaris: tenant-scoped
 
         if ($count <= 1) {
             throw new RuntimeException('Record could not be deleted as the app requires at least one admin user.');
         }
 
-        $this->db->delete('users', ['id' => $admin_id]);
+        $this->db->where('id', $admin_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('users'); // Polaris: tenant-scoped
     }
 
     /**
@@ -397,7 +401,8 @@ class Admins_model extends EA_Model
      */
     public function find(int $admin_id): array
     {
-        $admin = $this->db->get_where('users', ['id' => $admin_id])->row_array();
+        $this->assert_tenant();
+        $admin = $this->db->where('id', $admin_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users')->row_array(); // Polaris: tenant-scoped
 
         if (!$admin) {
             throw new InvalidArgumentException('The provided admin ID was not found in the database: ' . $admin_id);
@@ -430,7 +435,7 @@ class Admins_model extends EA_Model
         }
 
         // Check whether the admin exists.
-        $query = $this->db->get_where('users', ['id' => $admin_id]);
+        $query = $this->db->where('id', $admin_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException('The provided admin ID was not found in the database: ' . $admin_id);
@@ -474,9 +479,10 @@ class Admins_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
+        $this->assert_tenant();
         $role_id = $this->get_admin_role_id();
 
-        return $this->db->from('users')->where('id_roles', $role_id);
+        return $this->db->from('users')->where('id_roles', $role_id)->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
     }
 
     /**
@@ -491,12 +497,14 @@ class Admins_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
         $role_id = $this->get_admin_role_id();
 
         $admins = $this->db
             ->select()
             ->from('users')
             ->where('id_roles', $role_id)
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->like('first_name', $keyword)
             ->or_like('last_name', $keyword)
