@@ -1,0 +1,13 @@
+# Port conflict fixes when running alongside Polaris stack:
+#   nginx   :80   → :8090  (Polaris caddy holds :80)
+#   swagger :8000 → :8001  (Polaris API holds :8000)
+#   mailpit :8025 → :8026  (Polaris mailhog holds :8025)
+services:
+  swagger-ui:
+    ports:
+      - "8001:8080"
+
+  mailpit:
+    ports:
+      - "8026:8025"
+      - "1026:1025"

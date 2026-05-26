@@ -294,7 +294,7 @@ class Secretaries_model extends MY_Model
      *
      * @throws RuntimeException|Exception
      */
-    protected function insert(array $secretary): int
+    public function insert(array $secretary): int
     {
         $secretary['create_datetime'] = date('Y-m-d H:i:s');
         $secretary['update_datetime'] = date('Y-m-d H:i:s');
@@ -372,7 +372,7 @@ class Secretaries_model extends MY_Model
      *
      * @throws RuntimeException|Exception
      */
-    protected function update(array $secretary): int
+    public function update(array $secretary): int
     {
         $this->assert_tenant();
         $secretary['update_datetime'] = date('Y-m-d H:i:s');

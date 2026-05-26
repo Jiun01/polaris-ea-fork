@@ -162,7 +162,7 @@ class Services_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $service): int
+    public function insert(array $service): int
     {
         $service['create_datetime'] = date('Y-m-d H:i:s');
         $service['update_datetime'] = date('Y-m-d H:i:s');
@@ -184,7 +184,7 @@ class Services_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $service): int
+    public function update(array $service): int
     {
         $this->assert_tenant();
         $service['update_datetime'] = date('Y-m-d H:i:s');

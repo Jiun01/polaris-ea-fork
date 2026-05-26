@@ -110,7 +110,7 @@ class Users_model extends MY_Model
      *
      * @throws RuntimeException|Exception
      */
-    protected function insert(array $user): int
+    public function insert(array $user): int
     {
         $user['create_datetime'] = date('Y-m-d H:i:s');
         $user['update_datetime'] = date('Y-m-d H:i:s');
@@ -182,7 +182,7 @@ class Users_model extends MY_Model
      *
      * @throws RuntimeException|Exception
      */
-    protected function update(array $user): int
+    public function update(array $user): int
     {
         $this->assert_tenant();
         $user['update_datetime'] = date('Y-m-d H:i:s');

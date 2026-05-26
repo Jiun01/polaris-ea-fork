@@ -90,7 +90,7 @@ class Settings_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $setting): int
+    public function insert(array $setting): int
     {
         $setting['create_datetime'] = date('Y-m-d H:i:s');
         $setting['update_datetime'] = date('Y-m-d H:i:s');
@@ -112,7 +112,7 @@ class Settings_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $setting): int
+    public function update(array $setting): int
     {
         $this->assert_tenant();
         $setting['update_datetime'] = date('Y-m-d H:i:s');

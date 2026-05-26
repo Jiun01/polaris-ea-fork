@@ -21,15 +21,28 @@ class BearerAuthHook
      */
     public function validate(): void
     {
+        // MY_Controller is in application/core/ but CI3 doesn't autoload core
+        // files until the controller is instantiated — too late for pre_controller.
+        if (!class_exists('MY_Controller', false)) {
+            require_once APPPATH . 'core/MY_Controller.php';
+        }
+
         // Clear stale static context first — PHP-FPM reuses worker processes,
         // so a previous request's tenant could leak into this one if we skip this.
         MY_Controller::clear_tenant_context();
 
-        $CI  =& get_instance();
-        $uri = $CI->uri->uri_string();
+        // get_instance() returns null at pre_controller time (CI superobject is not
+        // yet assigned). Parse REQUEST_URI directly instead.
+        $raw_uri = ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '', '/');
+        // Strip the index.php front-controller segment if present.
+        if (str_starts_with($raw_uri, 'index.php/')) {
+            $raw_uri = substr($raw_uri, strlen('index.php/'));
+        } elseif ($raw_uri === 'index.php') {
+            $raw_uri = '';
+        }
 
         // Only enforce on the REST API surface.
-        if (!str_starts_with($uri, 'api/v1/') && $uri !== 'api/v1') {
+        if (!str_starts_with($raw_uri, 'api/v1/') && $raw_uri !== 'api/v1') {
             return;
         }
 

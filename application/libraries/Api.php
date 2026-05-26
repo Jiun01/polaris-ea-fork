@@ -64,6 +64,12 @@ class Api
      */
     public function auth(): void
     {
+        // Polaris path: BearerAuthHook already validated the JWT and populated
+        // MY_Controller::$tenant_id. No further EA-level auth is required.
+        if (!empty(MY_Controller::$tenant_id)) {
+            return;
+        }
+
         try {
             // Bearer token.
             $api_token = setting('api_token');

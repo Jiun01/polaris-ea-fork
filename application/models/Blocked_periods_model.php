@@ -109,7 +109,7 @@ class Blocked_periods_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $blocked_period): int
+    public function insert(array $blocked_period): int
     {
         $blocked_period['create_datetime'] = date('Y-m-d H:i:s');
         $blocked_period['update_datetime'] = date('Y-m-d H:i:s');
@@ -131,7 +131,7 @@ class Blocked_periods_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $blocked_period): int
+    public function update(array $blocked_period): int
     {
         $this->assert_tenant();
         $blocked_period['update_datetime'] = date('Y-m-d H:i:s');

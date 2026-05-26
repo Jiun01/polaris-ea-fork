@@ -264,7 +264,7 @@ class Customers_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $customer): int
+    public function insert(array $customer): int
     {
         $customer['create_datetime'] = date('Y-m-d H:i:s');
         $customer['update_datetime'] = date('Y-m-d H:i:s');
@@ -287,7 +287,7 @@ class Customers_model extends MY_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $customer): int
+    public function update(array $customer): int
     {
         $this->assert_tenant();
         $customer['update_datetime'] = date('Y-m-d H:i:s');
