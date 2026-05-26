@@ -43,6 +43,12 @@ if (!function_exists('setting')) {
             throw new InvalidArgumentException('The $key argument cannot be empty.');
         }
 
+        // Pre-login pages (e.g. Login, Installation) call setting() before any
+        // tenant is established. Return the default rather than throwing.
+        if (class_exists('MY_Controller', false) && empty(MY_Controller::$tenant_id)) {
+            return $default;
+        }
+
         if (is_array($key)) {
             foreach ($key as $name => $value) {
                 $setting = $CI->settings_model

@@ -64,6 +64,12 @@ class Accounts
             return null;
         }
 
+        // Set tenant context from the user_settings row so MY_Model scoping works
+        // during the rest of the login flow (users_model->find, roles_model->find).
+        if (!empty($user_settings['tenant_id'])) {
+            MY_Controller::set_tenant_context($user_settings['tenant_id']);
+        }
+
         $user = $this->CI->users_model->find($user_settings['id_users']);
 
         $role = $this->CI->roles_model->find($user['id_roles']);
