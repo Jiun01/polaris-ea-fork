@@ -18,7 +18,7 @@
  *
  * @package Models
  */
-class Providers_model extends EA_Model
+class Providers_model extends MY_Model
 {
     /**
      * @var array
@@ -83,7 +83,7 @@ class Providers_model extends EA_Model
     {
         // If a provider ID is provided then check whether the record really exists in the database.
         if (!empty($provider['id'])) {
-            $count = $this->db->get_where('users', ['id' => $provider['id']])->num_rows();
+            $count = $this->db->where('id', $provider['id'])->where('tenant_id', MY_Controller::$tenant_id)->get('users')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -163,6 +163,7 @@ class Providers_model extends EA_Model
             ->join('roles', 'roles.id = users.id_roles', 'inner')
             ->where('roles.slug', DB_SLUG_PROVIDER)
             ->where('users.email', $provider['email'])
+            ->where('users.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->where('users.id !=', $provider_id)
             ->get()
             ->num_rows();
@@ -212,6 +213,7 @@ class Providers_model extends EA_Model
         ?int $offset = null,
         ?string $order_by = null,
     ): array {
+        $this->assert_tenant();
         $role_id = $this->get_provider_role_id();
 
         if ($where !== null) {
@@ -222,7 +224,7 @@ class Providers_model extends EA_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $providers = $this->db->get_where('users', ['id_roles' => $role_id], $limit, $offset)->result_array();
+        $providers = $this->db->where('tenant_id', MY_Controller::$tenant_id)->get_where('users', ['id_roles' => $role_id], $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($providers as &$provider) {
             $this->cast($provider);
@@ -306,6 +308,8 @@ class Providers_model extends EA_Model
 
         unset($provider['services'], $provider['settings']);
 
+        $provider = $this->inject_tenant_id($provider); // Polaris: tenant-scoped
+
         if (!$this->db->insert('users', $provider)) {
             throw new RuntimeException('Could not insert provider.');
         }
@@ -384,6 +388,7 @@ class Providers_model extends EA_Model
      */
     protected function update(array $provider): int
     {
+        $this->assert_tenant();
         $provider['update_datetime'] = date('Y-m-d H:i:s');
 
         $service_ids = $provider['services'];
@@ -391,6 +396,7 @@ class Providers_model extends EA_Model
         $settings = $provider['settings'];
 
         unset($provider['services'], $provider['settings']);
+        unset($provider['tenant_id']); // prevent spoof
 
         if (isset($settings['password'])) {
             $existing_settings = $this->db->get_where('user_settings', ['id_users' => $provider['id']])->row_array();
@@ -406,9 +412,7 @@ class Providers_model extends EA_Model
             $settings['password'] = hash_password($existing_settings['salt'], $settings['password']);
         }
 
-        if (!$this->db->update('users', $provider, ['id' => $provider['id']])) {
-            throw new RuntimeException('Could not update provider.');
-        }
+        $this->db->where('id', $provider['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('users', $provider); // Polaris: tenant-scoped
 
         $this->set_settings($provider['id'], $settings);
         $this->set_service_ids($provider['id'], $service_ids);
@@ -446,7 +450,8 @@ class Providers_model extends EA_Model
      */
     public function delete(int $provider_id): void
     {
-        $this->db->delete('users', ['id' => $provider_id]);
+        $this->assert_tenant();
+        $this->db->where('id', $provider_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('users'); // Polaris: tenant-scoped
     }
 
     /**
@@ -470,7 +475,7 @@ class Providers_model extends EA_Model
         }
 
         // Check whether the provider exists.
-        $query = $this->db->get_where('users', ['id' => $provider_id]);
+        $query = $this->db->where('id', $provider_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException(
@@ -550,6 +555,7 @@ class Providers_model extends EA_Model
             'id_roles' => $this->db->get_where('roles', ['slug' => DB_SLUG_PROVIDER])->row()->id,
         ];
 
+        $where['tenant_id'] = MY_Controller::$tenant_id; // Polaris: tenant-scoped
         if ($this->db->get_where('users', $where)->num_rows() === 0) {
             throw new InvalidArgumentException('Provider ID was not found in the database: ' . $provider_id);
         }
@@ -581,7 +587,8 @@ class Providers_model extends EA_Model
      */
     public function find(int $provider_id): array
     {
-        $provider = $this->db->get_where('users', ['id' => $provider_id])->row_array();
+        $this->assert_tenant();
+        $provider = $this->db->where('id', $provider_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users')->row_array(); // Polaris: tenant-scoped
 
         if (!$provider) {
             throw new InvalidArgumentException(
@@ -636,12 +643,15 @@ class Providers_model extends EA_Model
             $this->db->where('users.is_private', false);
         }
 
+        $this->assert_tenant();
+
         $providers = $this->db
             ->select('users.*')
             ->from('users')
             ->join('roles', 'roles.id = users.id_roles', 'inner')
             ->join('services_providers', 'services_providers.id_users = users.id', 'inner')
             ->where('roles.slug', DB_SLUG_PROVIDER)
+            ->where('users.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->order_by('first_name ASC, last_name ASC, email ASC')
             ->group_by('users.id')
             ->get()
@@ -663,9 +673,10 @@ class Providers_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
+        $this->assert_tenant();
         $role_id = $this->get_provider_role_id();
 
-        return $this->db->from('users')->where('id_roles', $role_id);
+        return $this->db->from('users')->where('id_roles', $role_id)->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
     }
 
     /**
@@ -680,12 +691,14 @@ class Providers_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
         $role_id = $this->get_provider_role_id();
 
         $providers = $this->db
             ->select()
             ->from('users')
             ->where('id_roles', $role_id)
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->like('first_name', $keyword)
             ->or_like('last_name', $keyword)

@@ -18,7 +18,7 @@
  *
  * @package Models
  */
-class Webhooks_model extends EA_Model
+class Webhooks_model extends MY_Model
 {
     /**
      * @var array
@@ -90,6 +90,7 @@ class Webhooks_model extends EA_Model
     {
         $webhook['create_datetime'] = date('Y-m-d H:i:s');
         $webhook['update_datetime'] = date('Y-m-d H:i:s');
+        $webhook = $this->inject_tenant_id($webhook); // Polaris: tenant-scoped
 
         if (!$this->db->insert('webhooks', $webhook)) {
             throw new RuntimeException('Could not insert webhook.');
@@ -109,11 +110,10 @@ class Webhooks_model extends EA_Model
      */
     protected function update(array $webhook): int
     {
+        $this->assert_tenant();
         $webhook['update_datetime'] = date('Y-m-d H:i:s');
-
-        if (!$this->db->update('webhooks', $webhook, ['id' => $webhook['id']])) {
-            throw new RuntimeException('Could not update webhook.');
-        }
+        unset($webhook['tenant_id']); // prevent spoof
+        $this->db->where('id', $webhook['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('webhooks', $webhook); // Polaris: tenant-scoped
 
         return $webhook['id'];
     }
@@ -127,7 +127,8 @@ class Webhooks_model extends EA_Model
      */
     public function delete(int $webhook_id): void
     {
-        $this->db->delete('webhooks', ['id' => $webhook_id]);
+        $this->assert_tenant();
+        $this->db->where('id', $webhook_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('webhooks'); // Polaris: tenant-scoped
     }
 
     /**
@@ -139,7 +140,8 @@ class Webhooks_model extends EA_Model
      */
     public function find(int $webhook_id): array
     {
-        $webhook = $this->db->get_where('webhooks', ['id' => $webhook_id])->row_array();
+        $this->assert_tenant();
+        $webhook = $this->db->where('id', $webhook_id)->where('tenant_id', MY_Controller::$tenant_id)->get('webhooks')->row_array(); // Polaris: tenant-scoped
 
         if (!$webhook) {
             throw new InvalidArgumentException('The provided webhook ID was not found in the database: ' . $webhook_id);
@@ -171,7 +173,7 @@ class Webhooks_model extends EA_Model
         }
 
         // Check whether the webhook exists.
-        $query = $this->db->get_where('webhooks', ['id' => $webhook_id]);
+        $query = $this->db->where('id', $webhook_id)->where('tenant_id', MY_Controller::$tenant_id)->get('webhooks'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException('The provided webhook ID was not found in the database: ' . $webhook_id);
@@ -196,7 +198,8 @@ class Webhooks_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
-        return $this->db->from('webhooks');
+        $this->assert_tenant();
+        return $this->db->from('webhooks')->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
     }
 
     /**
@@ -211,9 +214,12 @@ class Webhooks_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
+
         $webhooks = $this->db
             ->select()
             ->from('webhooks')
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->like('name', $keyword)
             ->or_like('url', $keyword)
@@ -256,7 +262,8 @@ class Webhooks_model extends EA_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $webhooks = $this->db->get('webhooks', $limit, $offset)->result_array();
+        $this->assert_tenant();
+        $webhooks = $this->db->where('tenant_id', MY_Controller::$tenant_id)->get('webhooks', $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($webhooks as &$webhook) {
             $this->cast($webhook);

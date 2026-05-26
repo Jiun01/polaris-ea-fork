@@ -16,7 +16,7 @@
  *
  * @package Models
  */
-class Unavailabilities_model extends EA_Model
+class Unavailabilities_model extends MY_Model
 {
     /**
      * @var array
@@ -77,7 +77,7 @@ class Unavailabilities_model extends EA_Model
     {
         // If an unavailability ID is provided then check whether the record really exists in the database.
         if (!empty($unavailability['id'])) {
-            $count = $this->db->get_where('appointments', ['id' => $unavailability['id']])->num_rows();
+            $count = $this->db->where('id', $unavailability['id'])->where('tenant_id', MY_Controller::$tenant_id)->get('appointments')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -121,6 +121,7 @@ class Unavailabilities_model extends EA_Model
             ->from('users')
             ->join('roles', 'roles.id = users.id_roles', 'inner')
             ->where('users.id', $unavailability['id_users_provider'])
+            ->where('users.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->where('roles.slug', DB_SLUG_PROVIDER)
             ->get()
             ->num_rows();
@@ -156,7 +157,9 @@ class Unavailabilities_model extends EA_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
+        $this->assert_tenant();
         $unavailabilities = $this->db
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->get_where('appointments', ['is_unavailability' => true], $limit, $offset)
             ->result_array();
 
@@ -183,6 +186,7 @@ class Unavailabilities_model extends EA_Model
         $unavailability['update_datetime'] = date('Y-m-d H:i:s');
         $unavailability['hash'] = random_string('alnum', 12);
         $unavailability['is_unavailability'] = true;
+        $unavailability = $this->inject_tenant_id($unavailability); // Polaris: tenant-scoped
 
         if (!$this->db->insert('appointments', $unavailability)) {
             throw new RuntimeException('Could not insert unavailability.');
@@ -202,11 +206,10 @@ class Unavailabilities_model extends EA_Model
      */
     protected function update(array $unavailability): int
     {
+        $this->assert_tenant();
         $unavailability['update_datetime'] = date('Y-m-d H:i:s');
-
-        if (!$this->db->update('appointments', $unavailability, ['id' => $unavailability['id']])) {
-            throw new RuntimeException('Could not update unavailability record.');
-        }
+        unset($unavailability['tenant_id']); // prevent spoof
+        $this->db->where('id', $unavailability['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('appointments', $unavailability); // Polaris: tenant-scoped
 
         return $unavailability['id'];
     }
@@ -220,7 +223,8 @@ class Unavailabilities_model extends EA_Model
      */
     public function delete(int $unavailability_id): void
     {
-        $this->db->delete('appointments', ['id' => $unavailability_id]);
+        $this->assert_tenant();
+        $this->db->where('id', $unavailability_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('appointments'); // Polaris: tenant-scoped
     }
 
     /**
@@ -234,7 +238,8 @@ class Unavailabilities_model extends EA_Model
      */
     public function find(int $unavailability_id): array
     {
-        $unavailability = $this->db->get_where('appointments', ['id' => $unavailability_id])->row_array();
+        $this->assert_tenant();
+        $unavailability = $this->db->where('id', $unavailability_id)->where('tenant_id', MY_Controller::$tenant_id)->get('appointments')->row_array(); // Polaris: tenant-scoped
 
         if (!$unavailability) {
             throw new InvalidArgumentException(
@@ -268,7 +273,7 @@ class Unavailabilities_model extends EA_Model
         }
 
         // Check whether the unavailability exists.
-        $query = $this->db->get_where('appointments', ['id' => $unavailability_id]);
+        $query = $this->db->where('id', $unavailability_id)->where('tenant_id', MY_Controller::$tenant_id)->get('appointments'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException(
@@ -297,7 +302,8 @@ class Unavailabilities_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
-        return $this->db->from('appointments');
+        $this->assert_tenant();
+        return $this->db->from('appointments')->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
     }
 
     /**
@@ -312,10 +318,13 @@ class Unavailabilities_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
+
         $unavailabilities = $this->db
             ->select()
             ->from('appointments')
             ->join('users AS providers', 'providers.id = appointments.id_users_provider', 'inner')
+            ->where('appointments.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->where('is_unavailability', true)
             ->group_start()
             ->like('appointments.start_datetime', $keyword)
@@ -358,9 +367,9 @@ class Unavailabilities_model extends EA_Model
         foreach ($resources as $resource) {
             $unavailability['provider'] = match ($resource) {
                 'provider' => $this->db
-                    ->get_where('users', [
-                        'id' => $unavailability['id_users_provider'] ?? ($unavailability['providerId'] ?? null),
-                    ])
+                    ->where('id', $unavailability['id_users_provider'] ?? ($unavailability['providerId'] ?? null))
+                    ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
+                    ->get('users')
                     ->row_array(),
                 default => throw new InvalidArgumentException(
                     'The requested unavailability relation is not supported: ' . $resource,
