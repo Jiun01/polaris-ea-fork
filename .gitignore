@@ -41,3 +41,8 @@
 /.env.*
 /push-image.bat
 
+# Playwright test artifacts
+/playwright-report/
+/playwright-results.json
+/test-results/
+
