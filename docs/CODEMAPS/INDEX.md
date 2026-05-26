@@ -1,6 +1,6 @@
 # Polaris EA Fork — Codemaps
 
-**Last Updated:** 2026-05-20
+**Last Updated:** 2026-05-26
 
 This directory contains architectural documentation for the Polaris-specific components in the Easy!Appointments fork. All codemaps are generated from the actual codebase and describe the structure as-is.
 
@@ -24,7 +24,7 @@ The Polaris EA fork extends Easy!Appointments v1.5.2 with multi-tenant support, 
 - **Multi-tenant tables:** 10 (appointments, services, users, settings, webhooks, etc.)
 - **Core tenant-enforcing classes:** 2 (MY_Model, MY_Controller)
 - **Migrations:** 2 (061: tenant_id columns + indexes; 062: ea_polaris_tenants shadow table)
-- **Auth entry points:** 1 (BearerAuthHook pre_controller hook)
+- **Tenant context paths:** 3 (Bearer JWT via BearerAuthHook; slug via Booking::slug(); session via EA_Controller::__construct())
 - **Public booking routes:** 1 (/book/{slug} → Booking::slug())
 - **E2E test specs:** 5 (auth, api isolation, public booking hardening, slug-routed booking, brand sweep)
 - **Docker stages:** 3 (Node assets, PHP vendor, production FPM)

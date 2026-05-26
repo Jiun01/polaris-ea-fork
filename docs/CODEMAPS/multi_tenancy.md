@@ -1,44 +1,48 @@
 # Multi-Tenancy Codemap
 
-**Last Updated:** 2026-05-20
+<!-- Generated: 2026-05-26 | Files scanned: 18 | Token estimate: ~1100 -->
+
+**Last Updated:** 2026-05-26
 **Entry Points:** MY_Controller::set_tenant_context(), MY_Model CRUD methods, migrations 061/062
 
 ## Architecture
 
+Three paths set the tenant context — all converge at `MY_Controller::set_tenant_context()`:
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Request (API or public /book/{slug})                       │
-├─────────────────────────────────────────────────────────────┤
-│  ↓ (pre_controller hook)                                    │
-│  BearerAuthHook::validate()  OR  Booking::slug()            │
-│     (API path)                      (public booking)        │
-│  ↓                              ↓                           │
-│  MY_Controller::from_bearer()   Polaris_tenant_model::      │
-│     (JWT decode)                   resolve_slug()           │
-│  ↓                              ↓                           │
-│  MY_Controller::set_tenant_context(tenant_id, branch_id)   │
-│     (populate static context)                               │
-│  ↓                                                          │
-│  Controller action runs                                     │
-│     ↓                                                        │
-│     Models call find(), insert(), update(), delete()        │
-│     ↓                                                        │
-│     MY_Model auto-injects tenant_id WHERE clause            │
-│     ↓                                                        │
-│  MySQL returns ONLY this tenant's rows                      │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────┬──────────────────┬──────────────────────┐
+│  /api/v1/*       │  /book/{slug}    │  /backend /calendar  │
+│  (API)           │  (public)        │  /services etc.      │
+│                  │                  │  (admin session)     │
+├──────────────────┼──────────────────┼──────────────────────┤
+│ pre_controller   │ routes.php →     │ EA_Controller::      │
+│ BearerAuthHook   │ Booking::slug()  │   __construct()      │
+│                  │                  │ (before ensure_user) │
+│ from_bearer()    │ from_slug()      │ resolve_session_     │
+│ JWT decode       │ shadow table     │   tenant()           │
+└───────┬──────────┴────────┬─────────┴──────────┬───────────┘
+        └───────────────────┴────────────────────┘
+                            ↓
+        MY_Controller::set_tenant_context(tenant_id)
+               MY_Controller::$tenant_id = <UUID>
+                            ↓
+          MY_Model::find/get_where/insert/update/delete
+              auto-injects WHERE tenant_id = ?
+                            ↓
+            MySQL returns ONLY this tenant's rows
 ```
 
 ## Key Modules
 
-| Module | Purpose | Exports | Key Methods |
-|--------|---------|---------|-------------|
-| **MY_Controller** | Static tenant context holder | set_tenant_context(), clear_tenant_context(), from_bearer() | — Stores tenant_id + tenant_branch_id as statics<br/>— Decodes Polaris JWT<br/>— Validates issuer/audience/tenant_id format |
-| **MY_Model** | Auto-scoping CRUD base class | find(), get_where(), insert(), update(), delete() | — assert_tenant() — fails if context unset<br/>— apply_tenant_where() — prepends {tenant_id: ...} to WHERE<br/>— inject_tenant_id() — adds tenant_id to INSERT/UPDATE data |
-| **TenantContextMissingException** | Thrown when tenant context is unset | RuntimeException subclass | — Thrown by MY_Model if MY_Controller::$tenant_id is null<br/>— Prevents accidental cross-tenant queries |
-| **Polaris_tenant_model** | Slug → tenant_id lookup (shadow table) | resolve_slug(slug) → UUID or null | — Queries ea_polaris_tenants (populated by webhook)<br/>— Checks status = 'active' only<br/>— Used by Booking::slug() to establish context |
-| **Migration 061** | Add tenant_id + tenant_branch_id columns | 10 multi-tenant tables | — Columns: NOT NULL tenant_id (UUID), NULL tenant_branch_id (UUID)<br/>— Composite index (tenant_id, id)<br/>— UNIQUE(tenant_id, email) on users<br/>— down() method for local dev rollback |
-| **Migration 062** | Create ea_polaris_tenants shadow table | PK: tenant_id, UNIQUE INDEX on slug | — Schema: tenant_id, slug, status (ENUM), synced_at (DATETIME)<br/>— Populated by Polaris webhook on tenant sync events<br/>— Zero per-request round-trip to Polaris Postgres |
+| Module | Purpose | Key Methods |
+|--------|---------|-------------|
+| **MY_Controller** | Static tenant context holder; base of EA_Controller | set_tenant_context(), clear_tenant_context(), from_bearer(), from_slug(), resolve_session_tenant() |
+| **EA_Controller** | Base for all EA controllers; extends MY_Controller | Calls resolve_session_tenant() at constructor start (before any model access) |
+| **MY_Model** | Auto-scoping CRUD base | assert_tenant(), apply_tenant_where(), inject_tenant_id(), find(), get_where(), delete() |
+| **TenantContextMissingException** | Thrown when context unset | Thrown by MY_Model; prevents cross-tenant queries |
+| **Polaris_tenant_model** | Slug → tenant_id lookup | resolve_slug(slug) → UUID or null; queries ea_polaris_tenants; checks status='active' |
+| **Migration 061** | tenant_id columns on 10 tables | NOT NULL UUID, composite index (tenant_id, id), UNIQUE(tenant_id, email) on users |
+| **Migration 062** | ea_polaris_tenants shadow table | {tenant_id, slug, status ENUM, synced_at}; populated by webhook |
 
 ## Data Flow
 
@@ -109,6 +113,34 @@ Booking::save_appointment()
 Response: 200 + confirmation email
 ```
 
+### Admin Backend (Session → Tenant Context)
+
+```
+GET /index.php/calendar
+Cookie: ea_session=<hash>   (set at login)
+
+↓ EA_Controller::__construct()
+  ├─ parent::__construct()  (CI_Controller bootstraps session/db)
+  ├─ if empty(self::$tenant_id):
+  │     MY_Controller::resolve_session_tenant()
+  │       ├─ $CI->load->is_loaded('session')  → true
+  │       ├─ $session->userdata('user_id')    → 6
+  │       ├─ SELECT tenant_id FROM users WHERE id = 6
+  │       └─ MY_Controller::set_tenant_context('aaaa...-0001')
+  ├─ load->library('accounts')
+  ├─ ensure_user_exists()       ← tenant context now set; no throw
+  └─ ... configure language, vars, rate_limit ...
+
+↓ Calendar::index()
+  ├─ appointments_model->get_where([...])
+  │   └─ MY_Model auto-scopes to tenant_id = 'aaaa...-0001'
+  └─ Renders calendar with ONLY this tenant's appointments
+```
+
+Note: `Accounts::check_login()` also calls `set_tenant_context()` during the
+login POST itself (from `user_settings.tenant_id`), so models used inside the
+login flow (users_model->find, roles_model->find) are also properly scoped.
+
 ### Tenant Context Lifecycle
 
 ```
@@ -164,9 +196,11 @@ Additionally, `ea_users` gets a UNIQUE constraint on `(tenant_id, email)` so no 
 
 1. **Static Context Isolation** — Tenant context is stored in static properties, not request parameters. Callers cannot spoof tenant_id via query strings or form fields.
 2. **Fail-Closed** — If tenant context is unset, MY_Model throws TenantContextMissingException on ANY query. No silent fallbacks; no "public" query mode.
-3. **Hook-Based Auth** — BearerAuthHook runs at pre_controller (before route handler), so every /api/v1/* request is authenticated before code runs. No per-controller auth logic needed.
-4. **Shadow Table Validation** — Polaris_tenant_model checks status = 'active' when resolving slugs; suspended tenants cannot be booked into.
-5. **PHP-FPM State Reset** — BearerAuthHook::clear_tenant_context() on every request to prevent stale tenant leakage when PHP-FPM reuses worker processes.
+3. **Hook-Based API Auth** — BearerAuthHook runs at pre_controller so every /api/v1/* request is authenticated before code runs. Internal routes (`/api/v1/internal/*`) bypass Bearer and use HMAC-SHA256 instead.
+4. **Constructor-Time Session Auth** — EA_Controller resolves session tenant at the very start of its constructor (before libraries or models load), preventing TenantContextMissingException in ensure_user_exists() and similar early calls.
+5. **Shadow Table Validation** — Polaris_tenant_model checks status = 'active' when resolving slugs; suspended tenants cannot be booked into.
+6. **PHP-FPM State Reset** — BearerAuthHook::clear_tenant_context() on every request prevents stale tenant leakage when PHP-FPM reuses worker processes.
+7. **Pre-login Guard** — setting_helper returns default value when no tenant is set, so Login/Installation pages load without throwing.
 
 ## Related Codemaps
 
