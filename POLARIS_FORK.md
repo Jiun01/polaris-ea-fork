@@ -26,11 +26,21 @@ Tagging convention: `polaris/v{ea_version}-r{rev}` — current `polaris/v1.6.0-r
 ## Production image
 
 ```
-ghcr.io/jiun01/polaris-ea:v1.6.0-r1
+ghcr.io/jiun01/polaris-ea:v1.6.0-r2
 ```
 
-Build and push: `bash docker/build.sh --push`  
-JWT secret, Turnstile keys, and CORS origin are sourced from environment variables — see `application/config/polaris.php`.
+Build and push: `bash docker/build.sh --tag v1.6.0-r2 --push`
+
+**Self-configuring (r2+):** the image ships no `config.php`. A baked entrypoint
+(`docker/php-fpm/docker-entrypoint.sh`) writes `config.php` from env on boot, waits
+for the DB, optionally runs migrations, then execs php-fpm. Required env:
+`EA_DB_HOST`, `EA_DB_NAME`, `EA_DB_USER`, `EA_DB_PASSWORD`, `EA_BASE_URL`,
+`EA_DEBUG_MODE` (default `false`), `EA_AUTO_MIGRATE` (default `false`; set `true` to
+migrate on boot). JWT secret (`POLARIS_EA_JWT_SECRET`), Turnstile keys, CORS origin,
+and webhook secret are read from env too — see `application/config/polaris.php`.
+
+> History: `v1.6.0-r1` = the 1.5.2→1.6.0 rebase; `v1.6.0-r2` adds the self-configuring
+> entrypoint (no functional app change).
 
 ## Documentation
 

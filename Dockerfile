@@ -89,6 +89,16 @@ RUN mkdir -p storage/uploads storage/cache storage/logs \
     && chown -R www-data:www-data storage application/cache application/logs \
     && chmod -R 775 storage application/cache application/logs
 
+# Self-configuring entrypoint: generates config.php from env on boot (the image
+# ships none — it holds DB creds). Installed outside /var/www/html so the prod
+# named-volume mount on that path cannot hide it. config.php is pre-created
+# www-data-owned so the www-data entrypoint can overwrite it.
+COPY docker/php-fpm/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
+    && touch /var/www/html/config.php \
+    && chown www-data:www-data /var/www/html/config.php \
+    && chmod 640 /var/www/html/config.php
+
 USER www-data
 
 EXPOSE 9000
@@ -96,4 +106,6 @@ EXPOSE 9000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD pgrep -x php-fpm > /dev/null || exit 1
 
+# Entrypoint self-configures (config.php from env) then execs the CMD.
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["php-fpm"]
