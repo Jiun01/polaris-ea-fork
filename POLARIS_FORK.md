@@ -7,7 +7,7 @@ This repository is a **white-labelled fork of [Easy!Appointments](https://github
 | Field | Value |
 |---|---|
 | Upstream repo | `alextselegidis/easyappointments` |
-| Baseline tag | `1.5.2` |
+| Baseline tag | `1.6.0` (rebased from `1.5.2` on 2026-05-30 — security release) |
 | License | **GPL-3.0** (`LICENSE` file untouched) |
 | Fork posture | SaaS-only — never ship this image to tenant-owned infrastructure (would trigger GPL-3.0 source-disclosure) |
 
@@ -15,17 +15,18 @@ This repository is a **white-labelled fork of [Easy!Appointments](https://github
 
 | Branch | Purpose |
 |---|---|
-| `main` | Mirrors upstream `1.5.2` exactly. Move forward only when the fork is rebased onto a newer EA tag. |
+| `main` | Carries the Polaris patch-set on the current EA baseline (`1.6.0`). Advances when rebased onto a newer EA tag. |
 | `polaris/whitelabel` | Brand sweep across user-facing strings, views, emails, assets. English locale only at GA. |
 | `polaris/defaults` | Polaris install configs (timezone, currency, sender email); installer seed step disabled. Merged into main. |
-| `polaris/integration` | `tenant_id` migration + `MY_Model` enforcement + Bearer-token / slug routing + PDPA/Turnstile + multi-stage Dockerfile + §6 E2E sweep. Merged into main → tagged `polaris/v1.5.2-r1`. |
+| `polaris/integration` | `tenant_id` migration + `MY_Model` enforcement + Bearer-token / slug routing + PDPA/Turnstile + multi-stage Dockerfile + §6 E2E sweep. |
+| `polaris/v1.6.0-r1` | Rebase of the full patch-set onto upstream `1.6.0` (security release). Merged into main → tagged `polaris/v1.6.0-r1`. |
 
-Tagging convention: `polaris/v1.5.2-r1` (first Polaris revision atop upstream `1.5.2`).
+Tagging convention: `polaris/v{ea_version}-r{rev}` — current `polaris/v1.6.0-r1` (first Polaris revision atop upstream `1.6.0`).
 
 ## Production image
 
 ```
-ghcr.io/jiun01/polaris-ea:v1.5.2-r1
+ghcr.io/jiun01/polaris-ea:v1.6.0-r1
 ```
 
 Build and push: `bash docker/build.sh --push`  
