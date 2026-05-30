@@ -58,6 +58,13 @@ class BearerAuthHook
             // respond_401 exits — unreachable
         }
 
+        // Global admin API token — stored in ea_settings (tenant_id='').
+        // Allows seed scripts and admin tools to authenticate without a JWT.
+        if ($this->is_global_api_token($token)) {
+            MY_Controller::set_global_admin_mode();
+            return;
+        }
+
         try {
             MY_Controller::from_bearer($token);
         } catch (RuntimeException $e) {
@@ -91,6 +98,35 @@ class BearerAuthHook
         }
 
         return null;
+    }
+
+    private function is_global_api_token(string $token): bool
+    {
+        $stored = $this->lookup_global_api_token();
+        return $stored !== null && $stored !== '' && hash_equals($stored, $token);
+    }
+
+    private function lookup_global_api_token(): ?string
+    {
+        if (!class_exists('Config', false)) {
+            require_once FCPATH . 'config.php';
+        }
+        try {
+            $dsn = 'mysql:host=' . Config::DB_HOST
+                 . ';dbname=' . Config::DB_NAME
+                 . ';charset=utf8mb4';
+            $pdo = new PDO($dsn, Config::DB_USERNAME, Config::DB_PASSWORD, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ]);
+            $stmt = $pdo->prepare(
+                "SELECT value FROM ea_settings WHERE name = 'api_token' AND tenant_id = '' LIMIT 1"
+            );
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return ($row !== false) ? (string) $row['value'] : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /**

@@ -13,6 +13,9 @@ phpunit.xml.dist
 playwright.config.ts
 playwright-results.json
 test-results/
+# Root-level debug scratch — MUST stay out of the image (test_envcheck.php
+# echoes EA_JWT_SIGNING_SECRET). See ADR / fork-ghcr-push runbook.
+test_*.php
 *.md
 .env
 .env.*

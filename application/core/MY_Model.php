@@ -32,7 +32,7 @@ class MY_Model extends EA_Model
 
     protected function assert_tenant(): void
     {
-        if (empty(MY_Controller::$tenant_id)) {
+        if (empty(MY_Controller::$tenant_id) && !MY_Controller::$global_admin_mode) {
             throw new TenantContextMissingException();
         }
     }
@@ -40,6 +40,9 @@ class MY_Model extends EA_Model
     protected function apply_tenant_where(array $where = []): array
     {
         $this->assert_tenant();
+        if (MY_Controller::$global_admin_mode) {
+            return $where; // no tenant filter — global admin sees all rows
+        }
         // tenant_id first so MySQL can use the leading column of composite
         // indexes created in migration 061.
         return ['tenant_id' => MY_Controller::$tenant_id] + $where;
@@ -48,8 +51,20 @@ class MY_Model extends EA_Model
     protected function inject_tenant_id(array $data): array
     {
         $this->assert_tenant();
-        $data['tenant_id'] = MY_Controller::$tenant_id;
+        // Global admin creates rows with tenant_id = '' (global scope).
+        $data['tenant_id'] = MY_Controller::$global_admin_mode ? '' : MY_Controller::$tenant_id;
         return $data;
+    }
+
+    /**
+     * Conditionally add a tenant_id WHERE clause to the active query.
+     * No-op when global_admin_mode is true (admin sees all tenants).
+     */
+    protected function add_tenant_scope(string $col = 'tenant_id'): void
+    {
+        if (!MY_Controller::$global_admin_mode) {
+            $this->db->where($col, MY_Controller::$tenant_id);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -59,11 +74,11 @@ class MY_Model extends EA_Model
     public function find(int $id): ?array
     {
         $this->assert_tenant();
-        $row = $this->db
-            ->where('id', $id)
-            ->where('tenant_id', MY_Controller::$tenant_id)
-            ->get($this->table)
-            ->row_array();
+        $query = $this->db->where('id', $id);
+        if (!MY_Controller::$global_admin_mode) {
+            $query = $query->where('tenant_id', MY_Controller::$tenant_id);
+        }
+        $row = $query->get($this->table)->row_array();
         return $row ?: null;
     }
 
@@ -76,9 +91,10 @@ class MY_Model extends EA_Model
     public function delete(int $id): void
     {
         $this->assert_tenant();
-        $this->db
-            ->where('id', $id)
-            ->where('tenant_id', MY_Controller::$tenant_id)
-            ->delete($this->table);
+        $query = $this->db->where('id', $id);
+        if (!MY_Controller::$global_admin_mode) {
+            $query = $query->where('tenant_id', MY_Controller::$tenant_id);
+        }
+        $query->delete($this->table);
     }
 }

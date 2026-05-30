@@ -3,11 +3,15 @@
 #   swagger :8000 → :8001  (Polaris API holds :8000)
 #   mailpit :8025 → :8026  (Polaris mailhog holds :8025)
 services:
-  swagger-ui:
-    ports:
-      - "8001:8080"
-
-  mailpit:
-    ports:
-      - "8026:8025"
-      - "1026:1025"
+  php-fpm:
+    environment:
+      # EA_JWT_SIGNING_SECRET: read by polaris.php config and any CI3-layer code.
+      - EA_JWT_SIGNING_SECRET=${EA_JWT_SIGNING_SECRET}
+      # POLARIS_EA_JWT_SECRET: read by MY_Controller::from_bearer() at pre_controller
+      # time (before CI3 is initialised). Must equal EA_JWT_SIGNING_SECRET so that
+      # JWTs minted by the Polaris side verify correctly in the EA fork.
+      # Overrides the placeholder value in the base docker-compose.yml.
+      - POLARIS_EA_JWT_SECRET=${EA_JWT_SIGNING_SECRET}
+    volumes:
+      # zz-polaris-env.conf sets clear_env=no so FPM workers inherit host env vars.
+      - ./docker/php-fpm/zz-polaris-env.conf:/usr/local/etc/php-fpm.d/zz-polaris-env.conf:ro
