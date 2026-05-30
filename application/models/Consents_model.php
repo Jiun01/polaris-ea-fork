@@ -18,7 +18,7 @@
  *
  * @package Models
  */
-class Consents_model extends EA_Model
+class Consents_model extends MY_Model
 {
     /**
      * @var array
@@ -70,10 +70,11 @@ class Consents_model extends EA_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $consent): int
+    public function insert(array $consent): int
     {
         $consent['create_datetime'] = date('Y-m-d H:i:s');
         $consent['update_datetime'] = date('Y-m-d H:i:s');
+        $consent = $this->inject_tenant_id($consent); // Polaris: tenant-scoped
 
         if (!$this->db->insert('consents', $consent)) {
             throw new RuntimeException('Could not insert consent.');
@@ -91,13 +92,12 @@ class Consents_model extends EA_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $consent): int
+    public function update(array $consent): int
     {
+        $this->assert_tenant();
         $consent['update_datetime'] = date('Y-m-d H:i:s');
-
-        if (!$this->db->update('consents', $consent, ['id' => $consent['id']])) {
-            throw new RuntimeException('Could not update consent.');
-        }
+        unset($consent['tenant_id']); // prevent spoof
+        $this->db->where('id', $consent['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('consents', $consent); // Polaris: tenant-scoped
 
         return $consent['id'];
     }
@@ -111,7 +111,8 @@ class Consents_model extends EA_Model
      */
     public function delete(int $consent_id): void
     {
-        $this->db->delete('consents', ['id' => $consent_id]);
+        $this->assert_tenant();
+        $this->db->where('id', $consent_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('consents'); // Polaris: tenant-scoped
     }
 
     /**
@@ -123,7 +124,8 @@ class Consents_model extends EA_Model
      */
     public function find(int $consent_id): array
     {
-        $consent = $this->db->get_where('consents', ['id' => $consent_id])->row_array();
+        $this->assert_tenant();
+        $consent = $this->db->where('id', $consent_id)->where('tenant_id', MY_Controller::$tenant_id)->get('consents')->row_array(); // Polaris: tenant-scoped
 
         if (!$consent) {
             throw new InvalidArgumentException('The provided consent ID was not found in the database: ' . $consent_id);
@@ -155,7 +157,7 @@ class Consents_model extends EA_Model
         }
 
         // Check whether the consent exists.
-        $query = $this->db->get_where('consents', ['id' => $consent_id]);
+        $query = $this->db->where('id', $consent_id)->where('tenant_id', MY_Controller::$tenant_id)->get('consents'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException('The provided consent ID was not found in the database: ' . $consent_id);
@@ -180,7 +182,8 @@ class Consents_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
-        return $this->db->from('consents');
+        $this->assert_tenant();
+        return $this->db->from('consents')->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
     }
 
     /**
@@ -195,9 +198,12 @@ class Consents_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
+
         $consents = $this->db
             ->select()
             ->from('consents')
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->like('first_name', $keyword)
             ->or_like('last_name', $keyword)
@@ -233,6 +239,8 @@ class Consents_model extends EA_Model
         ?int $offset = null,
         ?string $order_by = null,
     ): array {
+        $this->assert_tenant();
+
         if ($where !== null) {
             $this->db->where($where);
         }
@@ -241,7 +249,7 @@ class Consents_model extends EA_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $consents = $this->db->get('consents', $limit, $offset)->result_array();
+        $consents = $this->db->where('tenant_id', MY_Controller::$tenant_id)->get('consents', $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($consents as &$consent) {
             $this->cast($consent);

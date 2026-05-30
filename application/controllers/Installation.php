@@ -54,7 +54,15 @@ class Installation extends EA_Controller
     }
 
     /**
-     * Installs Easy!Appointments on the server.
+     * Installs Polaris Calendar on the server.
+     *
+     * Polaris install defaults baked here (B21 — Phase 3):
+     *  - Timezone: Asia/Kuala_Lumpur (overrides PHP system default)
+     *  - Sample-data seed REMOVED: no auto-created "Service" / "Jane Doe" /
+     *    "James Doe" placeholder rows. Polaris's per-tenant provisioning
+     *    code creates services / providers / customers per tenant via the
+     *    REST API after install. A fresh boot lands with: 1 admin user, the
+     *    company settings the operator entered, and zero domain data.
      */
     public function perform(): void
     {
@@ -136,8 +144,9 @@ class Installation extends EA_Controller
 
             $this->instance->migrate();
 
-            // Insert admin
-            $admin['timezone'] = date_default_timezone_get();
+            // Insert admin — hardcoded Asia/Kuala_Lumpur per Polaris install
+            // default (Phase 3). Admin can change in their profile post-install.
+            $admin['timezone'] = 'Asia/Kuala_Lumpur';
             $admin['settings']['username'] = $admin['username'];
             $admin['settings']['password'] = $admin['password'];
             $admin['settings']['notifications'] = true;
@@ -161,44 +170,10 @@ class Installation extends EA_Controller
                 'company_link' => $company['company_link'],
             ]);
 
-            // Service
-            $service_id = $this->services_model->save([
-                'name' => 'Service',
-                'duration' => '30',
-                'price' => '0',
-                'currency' => '',
-                'slot_interval' => 15,
-                'attendants_number' => '1',
-            ]);
-
-            // Provider
-            $this->providers_model->save([
-                'first_name' => 'Jane',
-                'last_name' => 'Doe',
-                'email' => 'jane@example.org',
-                'phone_number' => '+1 (000) 000-0000',
-                'services' => [$service_id],
-                'language' => $admin['language'],
-                'timezone' => $admin['timezone'],
-                'settings' => [
-                    'username' => 'janedoe',
-                    'password' => random_string(),
-                    'working_plan' => setting('company_working_plan'),
-                    'notifications' => true,
-                    'google_sync' => false,
-                    'sync_past_days' => 30,
-                    'sync_future_days' => 90,
-                    'calendar_view' => CALENDAR_VIEW_DEFAULT,
-                ],
-            ]);
-
-            // Customer
-            $this->customers_model->save([
-                'first_name' => 'James',
-                'last_name' => 'Doe',
-                'email' => 'james@example.org',
-                'phone_number' => '+1 (000) 000-0000',
-            ]);
+            // Sample-data seed (Service / Jane Doe provider / James Doe
+            // customer) intentionally removed per Polaris install discipline.
+            // See PRD §Phase 3. Per-tenant provisioning happens in Polaris's
+            // services/booking.py against the EA REST API.
 
             json_response([
                 'success' => true,

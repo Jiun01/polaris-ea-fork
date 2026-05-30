@@ -6,13 +6,13 @@
     <div id="about" class="col-lg-8 offset-lg-2">
 
         <div class="text-center my-5">
-            <img src="<?= base_url('assets/img/logo.png') ?>" alt="Easy!Appointments Logo" class="mb-5">
+            <img src="<?= base_url('assets/img/logo.png') ?>" alt="Polaris Calendar Logo" class="mb-5">
 
             <h3>
-                Easy!Appointments
+                Polaris Calendar
             </h3>
             <h6 class="text-primary">
-                Online Appointment Scheduler
+                Booking subsystem of the Polaris platform
             </h6>
         </div>
 
@@ -67,21 +67,6 @@
         </div>
 
         <h4 class="fw-light mb-3">
-            <?= lang('premium') ?>
-        </h4>
-
-        <p>
-            <?= lang('about_app_premium') ?>
-        </p>
-
-        <div class="mb-5">
-            <a class="btn btn-primary d-block w-100 btn-lg m-auto" href="https://easyappointments.org/premium" target="_blank">
-                <i class="fas fa-crown me-2 text-warning"></i>
-                <?= lang('go_premium') ?>
-            </a>
-        </div>
-
-        <h4 class="fw-light mb-3">
             <?= lang('support') ?>
         </h4>
 
@@ -91,39 +76,16 @@
 
         <div class="row mb-5">
             <div class="col-lg-6 mb-3">
-                <a class="btn btn-outline-secondary d-block" href="https://easyappointments.org" target="_blank">
+                <a class="btn btn-outline-secondary d-block" href="https://getpolaris.my" target="_blank">
                     <i class="fas fa-external-link-alt me-2"></i>
                     <?= lang('official_website') ?>
                 </a>
             </div>
 
             <div class="col-lg-6 mb-3">
-                <a class="btn btn-outline-secondary d-block"
-                   href="https://groups.google.com/forum/#!forum/easy-appointments" target="_blank">
-                    <i class="fas fa-external-link-alt me-2"></i>
-                    <?= lang('support_group') ?>
-                </a>
-            </div>
-
-            <div class="col-lg-6 mb-3">
-                <a class="btn btn-outline-secondary d-block"
-                   href="https://github.com/alextselegidis/easyappointments/issues" target="_blank">
-                    <i class="fas fa-external-link-alt me-2"></i>
-                    <?= lang('project_issues') ?>
-                </a>
-            </div>
-
-            <div class="col-lg-6 mb-3">
-                <a class="btn btn-outline-secondary d-block" href="https://facebook.com/easyappts" target="_blank">
-                    <i class="fas fa-external-link-alt me-2"></i>
-                    Facebook
-                </a>
-            </div>
-
-            <div class="col-lg-6 mb-3">
-                <a class="btn btn-outline-secondary d-block" href="https://x.com/easyappts" target="_blank">
-                    <i class="fas fa-external-link-alt me-2"></i>
-                    X.com
+                <a class="btn btn-outline-secondary d-block" href="mailto:support@getpolaris.my">
+                    <i class="fas fa-envelope me-2"></i>
+                    support@getpolaris.my
                 </a>
             </div>
         </div>

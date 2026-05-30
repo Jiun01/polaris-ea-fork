@@ -64,9 +64,21 @@ class Api
      */
     public function auth(): void
     {
+        // Polaris path: BearerAuthHook already validated the JWT and populated
+        // MY_Controller::$tenant_id. No further EA-level auth is required.
+        if (!empty(MY_Controller::$tenant_id)) {
+            return;
+        }
+
         try {
-            // Bearer token.
-            $api_token = setting('api_token');
+            // Polaris: query the token directly so it works before a tenant is
+            // established (setting() returns null when tenant_id is empty).
+            $api_token_row = $this->CI->db
+                ->where('name', 'api_token')
+                ->where('tenant_id', '')
+                ->get('ea_settings')
+                ->row_array();
+            $api_token = $api_token_row['value'] ?? '';
             $provided_token = $this->get_bearer_token();
 
             // Use timing-safe comparison to prevent timing attacks

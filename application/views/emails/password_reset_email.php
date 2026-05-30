@@ -15,7 +15,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <title>
-        <?= $subject ?> | Easy!Appointments
+        <?= $subject ?> | Polaris Calendar
     </title>
     <style>
         /* -------------------------------------
@@ -431,8 +431,8 @@
                         <tr>
                             <td class="content-block powered-by">
                                 Powered by
-                                <a href="https://easyappointments.org" style="text-decoration: none;">
-                                    Easy!Appointments
+                                <a href="https://getpolaris.my" style="text-decoration: none;">
+                                    Polaris
                                 </a>
                                 |
                                 <a href="<?= e($settings['company_link']) ?>" style="text-decoration: none;">

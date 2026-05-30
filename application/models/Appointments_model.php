@@ -16,7 +16,7 @@
  *
  * @package Models
  */
-class Appointments_model extends EA_Model
+class Appointments_model extends MY_Model
 {
     /**
      * @var array
@@ -81,7 +81,7 @@ class Appointments_model extends EA_Model
     {
         // If an appointment ID is provided then check whether the record really exists in the database.
         if (!empty($appointment['id'])) {
-            $count = $this->db->get_where('appointments', ['id' => $appointment['id']])->num_rows();
+            $count = $this->db->where('id', $appointment['id'])->where('tenant_id', MY_Controller::$tenant_id)->get('appointments')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -129,6 +129,7 @@ class Appointments_model extends EA_Model
             ->from('users')
             ->join('roles', 'roles.id = users.id_roles', 'inner')
             ->where('users.id', $appointment['id_users_provider'])
+            ->where('users.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->where('roles.slug', DB_SLUG_PROVIDER)
             ->get()
             ->num_rows();
@@ -146,6 +147,7 @@ class Appointments_model extends EA_Model
                 ->from('users')
                 ->join('roles', 'roles.id = users.id_roles', 'inner')
                 ->where('users.id', $appointment['id_users_customer'])
+                ->where('users.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
                 ->where('roles.slug', DB_SLUG_CUSTOMER)
                 ->get()
                 ->num_rows();
@@ -157,7 +159,7 @@ class Appointments_model extends EA_Model
             }
 
             // Make sure the service ID really exists in the database.
-            $count = $this->db->get_where('services', ['id' => $appointment['id_services']])->num_rows();
+            $count = $this->db->where('id', $appointment['id_services'])->where('tenant_id', MY_Controller::$tenant_id)->get('services')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException('Appointment service id is invalid.');
@@ -181,6 +183,8 @@ class Appointments_model extends EA_Model
         ?int $offset = null,
         ?string $order_by = null,
     ): array {
+        $this->assert_tenant();
+
         if ($where !== null) {
             $this->db->where($where);
         }
@@ -190,6 +194,7 @@ class Appointments_model extends EA_Model
         }
 
         $appointments = $this->db
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->get_where('appointments', ['is_unavailability' => false], $limit, $offset)
             ->result_array();
 
@@ -209,12 +214,13 @@ class Appointments_model extends EA_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $appointment): int
+    public function insert(array $appointment): int
     {
         $appointment['book_datetime'] = date('Y-m-d H:i:s');
         $appointment['create_datetime'] = date('Y-m-d H:i:s');
         $appointment['update_datetime'] = date('Y-m-d H:i:s');
         $appointment['hash'] = random_string('alnum', 12);
+        $appointment = $this->inject_tenant_id($appointment); // Polaris: tenant-scoped
 
         if (!$this->db->insert('appointments', $appointment)) {
             throw new RuntimeException('Could not insert appointment.');
@@ -232,11 +238,15 @@ class Appointments_model extends EA_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $appointment): int
+    public function update(array $appointment): int
     {
+        $this->assert_tenant();
         $appointment['update_datetime'] = date('Y-m-d H:i:s');
+        unset($appointment['tenant_id']); // prevent spoof
 
-        if (!$this->db->update('appointments', $appointment, ['id' => $appointment['id']])) {
+        $this->db->where('id', $appointment['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('appointments', $appointment); // Polaris: tenant-scoped
+
+        if ($this->db->affected_rows() === 0 && !$this->db->error()['code']) {
             throw new RuntimeException('Could not update appointment record.');
         }
 
@@ -254,7 +264,8 @@ class Appointments_model extends EA_Model
      */
     public function find(int $appointment_id): array
     {
-        $appointment = $this->db->get_where('appointments', ['id' => $appointment_id])->row_array();
+        $this->assert_tenant();
+        $appointment = $this->db->where('id', $appointment_id)->where('tenant_id', MY_Controller::$tenant_id)->get('appointments')->row_array(); // Polaris: tenant-scoped
 
         if (!$appointment) {
             throw new InvalidArgumentException(
@@ -288,7 +299,7 @@ class Appointments_model extends EA_Model
         }
 
         // Check whether the appointment exists.
-        $query = $this->db->get_where('appointments', ['id' => $appointment_id]);
+        $query = $this->db->where('id', $appointment_id)->where('tenant_id', MY_Controller::$tenant_id)->get('appointments'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException(
@@ -315,7 +326,8 @@ class Appointments_model extends EA_Model
      */
     public function clear_google_sync_ids(int $provider_id): void
     {
-        $this->db->update('appointments', ['id_google_calendar' => null], ['id_users_provider' => $provider_id]);
+        $this->assert_tenant();
+        $this->db->where('id_users_provider', $provider_id)->where('tenant_id', MY_Controller::$tenant_id)->update('appointments', ['id_google_calendar' => null]); // Polaris: tenant-scoped
     }
 
     /**
@@ -325,7 +337,8 @@ class Appointments_model extends EA_Model
      */
     public function clear_caldav_sync_ids(int $provider_id): void
     {
-        $this->db->update('appointments', ['id_caldav_calendar' => null], ['id_users_provider' => $provider_id]);
+        $this->assert_tenant();
+        $this->db->where('id_users_provider', $provider_id)->where('tenant_id', MY_Controller::$tenant_id)->update('appointments', ['id_caldav_calendar' => null]); // Polaris: tenant-scoped
     }
 
     /**
@@ -338,10 +351,12 @@ class Appointments_model extends EA_Model
      */
     public function delete_caldav_recurring_events(string $start_date_time, string $end_date_time): void
     {
+        $this->assert_tenant();
         $this->db
             ->where('start_datetime >=', $start_date_time)
             ->where('end_datetime <=', $end_date_time)
             ->where('is_unavailability', true)
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->like('id_caldav_calendar', 'RECURRENCE')
             ->delete('appointments');
     }
@@ -355,7 +370,8 @@ class Appointments_model extends EA_Model
      */
     public function delete(int $appointment_id): void
     {
-        $this->db->delete('appointments', ['id' => $appointment_id]);
+        $this->assert_tenant();
+        $this->db->where('id', $appointment_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('appointments'); // Polaris: tenant-scoped
     }
 
     /**
@@ -383,6 +399,7 @@ class Appointments_model extends EA_Model
         $result = $this->db
             ->select('count(*) AS attendants_number')
             ->from('appointments')
+            ->where('appointments.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->group_start()
             ->where('start_datetime <=', $start->format('Y-m-d H:i:s'))
@@ -427,6 +444,7 @@ class Appointments_model extends EA_Model
         $result = $this->db
             ->select('count(*) AS attendants_number')
             ->from('appointments')
+            ->where('appointments.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->group_start()
             ->where('start_datetime <=', $start->format('Y-m-d H:i:s'))
@@ -452,7 +470,8 @@ class Appointments_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
-        return $this->db->from('appointments');
+        $this->assert_tenant();
+        return $this->db->from('appointments')->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
     }
 
     /**
@@ -467,12 +486,15 @@ class Appointments_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
+
         $appointments = $this->db
             ->select('appointments.*')
             ->from('appointments')
             ->join('services', 'services.id = appointments.id_services', 'left')
             ->join('users AS providers', 'providers.id = appointments.id_users_provider', 'inner')
             ->join('users AS customers', 'customers.id = appointments.id_users_customer', 'left')
+            ->where('appointments.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->where('is_unavailability', false)
             ->group_start()
             ->like('appointments.start_datetime', $keyword)
@@ -556,25 +578,25 @@ class Appointments_model extends EA_Model
             switch ($resource) {
                 case 'service':
                     $appointment['service'] = $this->db
-                        ->get_where('services', [
-                            'id' => $appointment['id_services'] ?? ($appointment['serviceId'] ?? null),
-                        ])
+                        ->where('id', $appointment['id_services'] ?? ($appointment['serviceId'] ?? null))
+                        ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
+                        ->get('services')
                         ->row_array();
                     break;
 
                 case 'provider':
                     $appointment['provider'] = $this->db
-                        ->get_where('users', [
-                            'id' => $appointment['id_users_provider'] ?? ($appointment['providerId'] ?? null),
-                        ])
+                        ->where('id', $appointment['id_users_provider'] ?? ($appointment['providerId'] ?? null))
+                        ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
+                        ->get('users')
                         ->row_array();
                     break;
 
                 case 'customer':
                     $appointment['customer'] = $this->db
-                        ->get_where('users', [
-                            'id' => $appointment['id_users_customer'] ?? ($appointment['customerId'] ?? null),
-                        ])
+                        ->where('id', $appointment['id_users_customer'] ?? ($appointment['customerId'] ?? null))
+                        ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
+                        ->get('users')
                         ->row_array();
                     break;
 
@@ -702,7 +724,7 @@ class Appointments_model extends EA_Model
      */
     public function calculate_end_datetime(array $appointment): string
     {
-        $duration = $this->db->get_where('services', ['id' => $appointment['id_services']])?->row()?->duration;
+        $duration = $this->db->where('id', $appointment['id_services'])->where('tenant_id', MY_Controller::$tenant_id)->get('services')->row()?->duration; // Polaris: tenant-scoped
 
         $end_date_time_object = new DateTime($appointment['start_datetime']);
 

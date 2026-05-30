@@ -1,0 +1,186 @@
+<?php defined('BASEPATH') or exit('No direct script access allowed');
+
+/* ----------------------------------------------------------------------------
+ * Polaris fork — tenant context holder + auth factories (S3-4 / S3-5).
+ *
+ * Static properties are populated either by BearerAuthHook (API path) or by
+ * Booking::slug() (public booking path). MY_Model reads these statics on
+ * every scoped query to enforce per-tenant data isolation.
+ * ---------------------------------------------------------------------------- */
+
+class MY_Controller extends CI_Controller
+{
+    public static ?string $tenant_id        = null;
+    public static ?string $tenant_branch_id = null;
+
+    /** True when a global admin API token authenticated the request (no tenant scope). */
+    public static bool $global_admin_mode = false;
+
+    // -------------------------------------------------------------------------
+    // Context setters
+    // -------------------------------------------------------------------------
+
+    public static function set_tenant_context(string $tenant_id, ?string $branch_id = null): void
+    {
+        self::$tenant_id        = $tenant_id;
+        self::$tenant_branch_id = $branch_id;
+    }
+
+    public static function clear_tenant_context(): void
+    {
+        self::$tenant_id        = null;
+        self::$tenant_branch_id = null;
+        self::$global_admin_mode = false;
+    }
+
+    public static function set_global_admin_mode(): void
+    {
+        self::$global_admin_mode = true;
+    }
+
+    // -------------------------------------------------------------------------
+    // Auth factories — called from BearerAuthHook or Booking::slug()
+    // -------------------------------------------------------------------------
+
+    /**
+     * Decode and validate a Polaris Bearer JWT, then set the tenant context.
+     *
+     * Expected claims:
+     *   iss = 'polaris', aud = 'ea-fork', tenant_id = <UUID>, exp = <unix ts>
+     *
+     * Throws RuntimeException with one of these codes (safe to forward to client):
+     *   token_expired | token_invalid
+     *
+     * @throws RuntimeException
+     */
+    public static function from_bearer(string $token): void
+    {
+        // get_instance() is null at pre_controller time (CI superobject not yet
+        // assigned to the static $_CI slot). Read env vars directly.
+        // NOTE: uses POLARIS_EA_JWT_SECRET (from the base docker-compose env block)
+        // because that name is reliably passed to FPM workers via clear_env=no.
+        // EA_JWT_SIGNING_SECRET is the same secret but injected via override/.env
+        // substitution and is not visible in the FPM web context.
+        $secret   = (string) (getenv('POLARIS_EA_JWT_SECRET') ?: '');
+        $issuer   = 'polaris';
+        $audience = 'ea-fork';
+
+        if ($secret === '') {
+            // Misconfiguration — fail closed rather than letting through.
+            throw new RuntimeException('token_invalid');
+        }
+
+        // Allow up to 10 s of clock skew between Polaris and EA hosts.
+        \Firebase\JWT\JWT::$leeway = 10;
+
+        try {
+            $decoded = \Firebase\JWT\JWT::decode(
+                $token,
+                new \Firebase\JWT\Key($secret, 'HS256'),
+            );
+        } catch (\Firebase\JWT\ExpiredException) {
+            throw new RuntimeException('token_expired');
+        } catch (\Throwable) {
+            throw new RuntimeException('token_invalid');
+        }
+
+        // Validate mandatory claims manually (firebase/php-jwt does not check iss/aud).
+        if (($decoded->iss ?? '') !== $issuer) {
+            throw new RuntimeException('token_invalid');
+        }
+
+        $aud = $decoded->aud ?? '';
+        if (is_array($aud) ? !in_array($audience, $aud, true) : $aud !== $audience) {
+            throw new RuntimeException('token_invalid');
+        }
+
+        $tenant_id = (string) ($decoded->tenant_id ?? '');
+
+        // Basic UUID format guard — signature already proves authenticity, but
+        // an empty or clearly malformed value should not reach MY_Model.
+        if ($tenant_id === '' || !preg_match('/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i', $tenant_id)) {
+            throw new RuntimeException('token_invalid');
+        }
+
+        $branch_id = null;
+        if (isset($decoded->tenant_branch_id)) {
+            $bid = (string) $decoded->tenant_branch_id;
+            if (!preg_match('/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i', $bid)) {
+                throw new RuntimeException('token_invalid');
+            }
+            $branch_id = $bid;
+        }
+
+        self::set_tenant_context($tenant_id, $branch_id);
+    }
+
+    /**
+     * Resolve the tenant context from the logged-in session's user_id.
+     *
+     * Called from EA_Controller::__construct() for backend (non-API, non-booking)
+     * requests. Safe to call when no session exists (pre-login pages) — it returns
+     * silently and leaves the tenant context unset, which keeps Login/Installation
+     * reachable.
+     */
+    public static function resolve_session_tenant(): void
+    {
+        $CI = &get_instance();
+
+        // isset() on CI3 magic properties always returns false (no __isset), so
+        // use is_a() against the loaded object directly rather than isset($CI->session).
+        $session = $CI->load->is_loaded('session') ? $CI->session : null;
+
+        if ($session === null) {
+            return;
+        }
+
+        $user_id = $session->userdata('user_id');
+
+        if (!empty($user_id)) {
+            // Authenticated backend path: look up the tenant from the users table.
+            $row = $CI->db
+                ->select('tenant_id')
+                ->from('users')
+                ->where('id', (int) $user_id)
+                ->limit(1)
+                ->get()
+                ->row_array();
+
+            if (!empty($row['tenant_id'])) {
+                self::set_tenant_context($row['tenant_id']);
+            }
+
+            return;
+        }
+
+        // Public booking path: Booking::slug() stores the resolved tenant_id in
+        // the session so subsequent AJAX requests (get_unavailable_dates, etc.)
+        // on the same booking session can resolve the context without re-parsing
+        // the slug from the URL.
+        $booking_tenant_id = $session->userdata('booking_tenant_id');
+
+        if (!empty($booking_tenant_id)) {
+            self::set_tenant_context($booking_tenant_id);
+        }
+    }
+
+    /**
+     * Resolve a tenant slug via the ea_polaris_tenants shadow table (S3-6),
+     * then set the tenant context.
+     *
+     * @throws RuntimeException if the slug is unknown or the tenant is suspended.
+     */
+    public static function from_slug(string $slug): void
+    {
+        $CI = get_instance();
+        $CI->load->model('polaris_tenant_model');
+
+        $tenant_id = $CI->polaris_tenant_model->resolve_slug($slug);
+
+        if ($tenant_id === null) {
+            throw new RuntimeException('unknown_slug');
+        }
+
+        self::set_tenant_context($tenant_id);
+    }
+}

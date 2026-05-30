@@ -4,7 +4,7 @@
 // Example: $config['smtp_host'] = 'smtp.gmail.com';
 // @link https://codeigniter.com/user_guide/libraries/email.html
 
-$config['useragent'] = 'Easy!Appointments';
+$config['useragent'] = 'Polaris Calendar';
 $config['protocol'] = 'mail'; // or 'smtp'
 $config['mailtype'] = 'html'; // or 'text'
 // $config['smtp_debug'] = '0'; // or '1'
@@ -14,8 +14,12 @@ $config['mailtype'] = 'html'; // or 'text'
 // $config['smtp_pass'] = '';
 // $config['smtp_crypto'] = 'ssl'; // or 'tls'
 // $config['smtp_port'] = 25;
-// $config['from_name'] = '';
-// $config['from_address'] = '';
-// $config['reply_to'] = '';
+
+// Polaris install sender defaults (B23 — Phase 3). The tenant's
+// business_email setting overrides these at runtime; these are the fallback
+// when no tenant-level override has been written yet.
+$config['from_name'] = 'Polaris';
+$config['from_address'] = 'noreply@getpolaris.my';
+$config['reply_to'] = 'support@getpolaris.my';
 $config['crlf'] = "\r\n";
 $config['newline'] = "\r\n";

@@ -5,6 +5,7 @@
  * @var bool $manage_mode
  * @var string $display_terms_and_conditions
  * @var string $display_privacy_policy
+ * @var string $polaris_turnstile_sitekey  Cloudflare Turnstile site key (empty = widget hidden)
  */
 ?>
 
@@ -78,6 +79,16 @@
             </div>
         <?php endif; ?>
 
+        <!-- Polaris PDPA opt-in (required, always shown on slug-routed booking pages) -->
+        <div class="form-check mb-3" id="polaris-pdpa-check">
+            <input type="checkbox" class="required form-check-input" id="accept-to-pdpa-polaris">
+            <label class="form-check-label" for="accept-to-pdpa-polaris">
+                I consent to Polaris storing my contact details for booking confirmation &amp; reminders
+                per the <a href="https://getpolaris.my/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
+            </label>
+        </div>
+
+        <?php slot('after_select_policies'); ?>
     </div>
 
     <div class="command-buttons text-center my-3 mx-auto d-md-flex justify-content-md-between">
@@ -87,7 +98,13 @@
             <?= lang('back') ?>
         </button>
         <form id="book-appointment-form" class="d-inline-block" method="post">
+            <?php if (!empty($polaris_turnstile_sitekey)): ?>
+                <div class="cf-turnstile mb-2"
+                     data-sitekey="<?= htmlspecialchars($polaris_turnstile_sitekey, ENT_QUOTES) ?>"
+                     data-theme="light"></div>
+            <?php endif; ?>
             <button id="book-appointment-submit" type="button" class="btn btn-primary w-100">
+
                 <i class="fas fa-check-square me-2"></i>
                 <?= $manage_mode ? lang('update') : lang('confirm') ?>
             </button>

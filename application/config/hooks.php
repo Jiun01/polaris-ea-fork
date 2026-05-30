@@ -12,7 +12,7 @@
 */
 
 /**
- * Add security headers to all responses.
+ * Add security headers to all responses. (upstream 1.6.0)
  */
 $hook['post_controller_constructor'][] = [
     'class' => '',
@@ -23,7 +23,7 @@ $hook['post_controller_constructor'][] = [
 ];
 
 /**
- * Probabilistically clean up old storage files (runs ~1% of requests).
+ * Probabilistically clean up old storage files (runs ~1% of requests). (upstream 1.6.0)
  */
 $hook['post_system'][] = [
     'class' => '',
@@ -32,6 +32,21 @@ $hook['post_system'][] = [
     'filepath' => 'hooks',
     'params' => [],
 ];
+
+// ── Polaris Bearer JWT auth (S3-5) ───────────────────────────────────────────
+// Validates the Authorization: Bearer <jwt> header on every /api/v1/* request
+// and populates MY_Controller::$tenant_id before the controller runs.
+$hook['pre_controller'][] = [
+    'class'    => 'BearerAuthHook',
+    'function' => 'validate',
+    'filename' => 'BearerAuthHook.php',
+    'filepath' => 'hooks',
+    'params'   => [],
+];
+
+// Note: session-based tenant resolution for backend routes happens directly in
+// EA_Controller::__construct() via MY_Controller::resolve_session_tenant(),
+// so no separate hook is required.
 
 /* End of file hooks.php */
 /* Location: ./application/config/hooks.php */

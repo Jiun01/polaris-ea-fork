@@ -31,3 +31,22 @@
 /vendor/
 /metafile
 .DS_Store
+
+# Polaris fork — local-only preview / scratch files (never commit)
+/_polaris_preview.html
+/_polaris_*.html
+
+# Secrets and local dev helpers (never commit)
+/.env
+/.env.*
+/push-image.bat
+
+# Root-level debug scratch — test_envcheck.php echoes EA_JWT_SIGNING_SECRET.
+# Already excluded from the image via .dockerignore; also keep out of git.
+/test_*.php
+
+# Playwright test artifacts
+/playwright-report/
+/playwright-results.json
+/test-results/
+

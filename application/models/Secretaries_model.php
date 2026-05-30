@@ -18,7 +18,7 @@
  *
  * @package Models
  */
-class Secretaries_model extends EA_Model
+class Secretaries_model extends MY_Model
 {
     /**
      * @var array
@@ -81,7 +81,7 @@ class Secretaries_model extends EA_Model
     {
         // If a secretary ID is provided then check whether the record really exists in the database.
         if (!empty($secretary['id'])) {
-            $count = $this->db->get_where('users', ['id' => $secretary['id']])->num_rows();
+            $count = $this->db->where('id', $secretary['id'])->where('tenant_id', MY_Controller::$tenant_id)->get('users')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -156,6 +156,7 @@ class Secretaries_model extends EA_Model
             ->join('roles', 'roles.id = users.id_roles', 'inner')
             ->where('roles.slug', DB_SLUG_SECRETARY)
             ->where('users.email', $secretary['email'])
+            ->where('users.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->where('users.id !=', $secretary_id)
             ->get()
             ->num_rows();
@@ -215,7 +216,8 @@ class Secretaries_model extends EA_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $secretaries = $this->db->get_where('users', ['id_roles' => $role_id], $limit, $offset)->result_array();
+        $this->assert_tenant();
+        $secretaries = $this->db->where('tenant_id', MY_Controller::$tenant_id)->get_where('users', ['id_roles' => $role_id], $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($secretaries as &$secretary) {
             $this->cast($secretary);
@@ -287,7 +289,7 @@ class Secretaries_model extends EA_Model
      *
      * @throws RuntimeException|Exception
      */
-    protected function insert(array $secretary): int
+    public function insert(array $secretary): int
     {
         $secretary['create_datetime'] = date('Y-m-d H:i:s');
         $secretary['update_datetime'] = date('Y-m-d H:i:s');
@@ -299,6 +301,8 @@ class Secretaries_model extends EA_Model
         $settings = $secretary['settings'];
 
         unset($secretary['providers'], $secretary['settings']);
+
+        $secretary = $this->inject_tenant_id($secretary); // Polaris: tenant-scoped
 
         if (!$this->db->insert('users', $secretary)) {
             throw new RuntimeException('Could not insert secretary.');
@@ -363,8 +367,9 @@ class Secretaries_model extends EA_Model
      *
      * @throws RuntimeException|Exception
      */
-    protected function update(array $secretary): int
+    public function update(array $secretary): int
     {
+        $this->assert_tenant();
         $secretary['update_datetime'] = date('Y-m-d H:i:s');
 
         $provider_ids = $secretary['providers'] ?? [];
@@ -372,6 +377,7 @@ class Secretaries_model extends EA_Model
         $settings = $secretary['settings'];
 
         unset($secretary['providers'], $secretary['settings']);
+        unset($secretary['tenant_id']); // prevent spoof
 
         if (isset($settings['password'])) {
             $existing_settings = $this->db->get_where('user_settings', ['id_users' => $secretary['id']])->row_array();
@@ -387,9 +393,7 @@ class Secretaries_model extends EA_Model
             $settings['password'] = hash_password($existing_settings['salt'], $settings['password']);
         }
 
-        if (!$this->db->update('users', $secretary, ['id' => $secretary['id']])) {
-            throw new RuntimeException('Could not update secretary.');
-        }
+        $this->db->where('id', $secretary['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('users', $secretary); // Polaris: tenant-scoped
 
         $this->set_settings($secretary['id'], $settings);
         $this->set_provider_ids($secretary['id'], $provider_ids);
@@ -427,7 +431,8 @@ class Secretaries_model extends EA_Model
      */
     public function delete(int $secretary_id): void
     {
-        $this->db->delete('users', ['id' => $secretary_id]);
+        $this->assert_tenant();
+        $this->db->where('id', $secretary_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('users'); // Polaris: tenant-scoped
     }
 
     /**
@@ -451,7 +456,7 @@ class Secretaries_model extends EA_Model
         }
 
         // Check whether the secretary exists.
-        $query = $this->db->get_where('users', ['id' => $secretary_id]);
+        $query = $this->db->where('id', $secretary_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException(
@@ -495,9 +500,10 @@ class Secretaries_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
+        $this->assert_tenant();
         $role_id = $this->get_secretary_role_id();
 
-        return $this->db->from('users')->where('id_roles', $role_id);
+        return $this->db->from('users')->where('id_roles', $role_id)->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
     }
 
     /**
@@ -512,12 +518,14 @@ class Secretaries_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
         $role_id = $this->get_secretary_role_id();
 
         $secretaries = $this->db
             ->select()
             ->from('users')
             ->where('id_roles', $role_id)
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->like('first_name', $keyword)
             ->or_like('last_name', $keyword)
@@ -768,7 +776,8 @@ class Secretaries_model extends EA_Model
      */
     public function find(int $secretary_id): array
     {
-        $secretary = $this->db->get_where('users', ['id' => $secretary_id])->row_array();
+        $this->assert_tenant();
+        $secretary = $this->db->where('id', $secretary_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users')->row_array(); // Polaris: tenant-scoped
 
         if (!$secretary) {
             throw new InvalidArgumentException(

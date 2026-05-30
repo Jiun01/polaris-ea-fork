@@ -2,6 +2,18 @@
 
 /*
 |--------------------------------------------------------------------------
+| Polaris install default — global PHP timezone (B22 — Phase 3)
+|--------------------------------------------------------------------------
+|
+| Sets PHP's date_default_timezone so all date functions (date(), time(),
+| DateTime, etc.) default to MY time. Per-user timezone preferences in
+| ea_users.timezone still override this for that user's display layer.
+|
+*/
+date_default_timezone_set('Asia/Kuala_Lumpur');
+
+/*
+|--------------------------------------------------------------------------
 | File and Directory Modes
 |--------------------------------------------------------------------------
 |

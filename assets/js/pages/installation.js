@@ -63,7 +63,7 @@ App.Pages.Installation = (function () {
             dataType: 'json',
         }).done(() => {
             $alert
-                .text('Easy!Appointments has been successfully installed!')
+                .text('Polaris Calendar has been successfully installed!')
                 .addClass('alert-success')
                 .prop('hidden', false);
 

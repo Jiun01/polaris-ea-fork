@@ -18,7 +18,7 @@
  *
  * @package Models
  */
-class Blocked_periods_model extends EA_Model
+class Blocked_periods_model extends MY_Model
 {
     /**
      * @var array
@@ -71,7 +71,7 @@ class Blocked_periods_model extends EA_Model
     {
         // If a blocked-period ID is provided then check whether the record really exists in the database.
         if (!empty($blocked_period['id'])) {
-            $count = $this->db->get_where('blocked_periods', ['id' => $blocked_period['id']])->num_rows();
+            $count = $this->db->where('id', $blocked_period['id'])->where('tenant_id', MY_Controller::$tenant_id)->get('blocked_periods')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -109,10 +109,11 @@ class Blocked_periods_model extends EA_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $blocked_period): int
+    public function insert(array $blocked_period): int
     {
         $blocked_period['create_datetime'] = date('Y-m-d H:i:s');
         $blocked_period['update_datetime'] = date('Y-m-d H:i:s');
+        $blocked_period = $this->inject_tenant_id($blocked_period); // Polaris: tenant-scoped
 
         if (!$this->db->insert('blocked_periods', $blocked_period)) {
             throw new RuntimeException('Could not insert blocked-period.');
@@ -130,13 +131,12 @@ class Blocked_periods_model extends EA_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $blocked_period): int
+    public function update(array $blocked_period): int
     {
+        $this->assert_tenant();
         $blocked_period['update_datetime'] = date('Y-m-d H:i:s');
-
-        if (!$this->db->update('blocked_periods', $blocked_period, ['id' => $blocked_period['id']])) {
-            throw new RuntimeException('Could not update blocked periods.');
-        }
+        unset($blocked_period['tenant_id']); // prevent spoof
+        $this->db->where('id', $blocked_period['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('blocked_periods', $blocked_period); // Polaris: tenant-scoped
 
         return $blocked_period['id'];
     }
@@ -150,7 +150,8 @@ class Blocked_periods_model extends EA_Model
      */
     public function delete(int $blocked_period_id): void
     {
-        $this->db->delete('blocked_periods', ['id' => $blocked_period_id]);
+        $this->assert_tenant();
+        $this->db->where('id', $blocked_period_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('blocked_periods'); // Polaris: tenant-scoped
     }
 
     /**
@@ -164,7 +165,8 @@ class Blocked_periods_model extends EA_Model
      */
     public function find(int $blocked_period_id): array
     {
-        $blocked_period = $this->db->get_where('blocked_periods', ['id' => $blocked_period_id])->row_array();
+        $this->assert_tenant();
+        $blocked_period = $this->db->where('id', $blocked_period_id)->where('tenant_id', MY_Controller::$tenant_id)->get('blocked_periods')->row_array(); // Polaris: tenant-scoped
 
         if (!$blocked_period) {
             throw new InvalidArgumentException(
@@ -197,8 +199,8 @@ class Blocked_periods_model extends EA_Model
             throw new InvalidArgumentException('The blocked-period ID argument cannot be empty.');
         }
 
-        // Check whether the service exists.
-        $query = $this->db->get_where('blocked_periods', ['id' => $blocked_period_id]);
+        // Check whether the blocked period exists.
+        $query = $this->db->where('id', $blocked_period_id)->where('tenant_id', MY_Controller::$tenant_id)->get('blocked_periods'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException(
@@ -232,9 +234,12 @@ class Blocked_periods_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
+
         $blocked_periods = $this->db
             ->select()
             ->from('blocked_periods')
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->like('name', $keyword)
             ->or_like('notes', $keyword)
@@ -300,6 +305,8 @@ class Blocked_periods_model extends EA_Model
         ?int $offset = null,
         ?string $order_by = null,
     ): array {
+        $this->assert_tenant();
+
         if ($where !== null) {
             $this->db->where($where);
         }
@@ -308,7 +315,7 @@ class Blocked_periods_model extends EA_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $blocked_periods = $this->db->get('blocked_periods', $limit, $offset)->result_array();
+        $blocked_periods = $this->db->where('tenant_id', MY_Controller::$tenant_id)->get('blocked_periods', $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($blocked_periods as &$blocked_period) {
             $this->cast($blocked_period);
@@ -424,7 +431,8 @@ class Blocked_periods_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
-        return $this->db->from('blocked_periods');
+        $this->assert_tenant();
+        return $this->db->from('blocked_periods')->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
     }
 
     /**

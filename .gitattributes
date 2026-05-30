@@ -1,1 +1,17 @@
 * text=auto
+
+# Polaris fork — binary fonts must not pass through line-ending normalization
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.otf    binary
+*.eot    binary
+*.ico    binary
+
+# Polaris fork — docker scripts/configs must stay LF on Windows checkouts so
+# Alpine/Debian bash + nginx + php-fpm can parse them. EA shipped these as LF
+# from upstream but `text=auto` flips them to CRLF on Windows.
+docker/**/*       text eol=lf
+docker/**/Dockerfile text eol=lf
+docker/**/start-* text eol=lf
+*.sh             text eol=lf

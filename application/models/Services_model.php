@@ -18,7 +18,7 @@
  *
  * @package Models
  */
-class Services_model extends EA_Model
+class Services_model extends MY_Model
 {
     /**
      * @var array
@@ -80,7 +80,9 @@ class Services_model extends EA_Model
     {
         // If a service ID is provided then check whether the record really exists in the database.
         if (!empty($service['id'])) {
-            $count = $this->db->get_where('services', ['id' => $service['id']])->num_rows();
+            $count = $this->db->where('id', $service['id']);
+            $this->add_tenant_scope(); // Polaris: tenant-scoped
+            $count = $this->db->get('services')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -96,8 +98,10 @@ class Services_model extends EA_Model
 
         // If a category was provided then make sure it really exists in the database.
         if (!empty($service['id_service_categories'])) {
+            $this->add_tenant_scope(); // Polaris: tenant-scoped
             $count = $this->db
-                ->get_where('service_categories', ['id' => $service['id_service_categories']])
+                ->where('id', $service['id_service_categories'])
+                ->get('service_categories')
                 ->num_rows();
 
             if (!$count) {
@@ -138,10 +142,11 @@ class Services_model extends EA_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $service): int
+    public function insert(array $service): int
     {
         $service['create_datetime'] = date('Y-m-d H:i:s');
         $service['update_datetime'] = date('Y-m-d H:i:s');
+        $service = $this->inject_tenant_id($service); // Polaris: tenant-scoped
 
         $provider_ids = $service['providers'] ?? [];
 
@@ -167,15 +172,19 @@ class Services_model extends EA_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $service): int
+    public function update(array $service): int
     {
+        $this->assert_tenant();
         $service['update_datetime'] = date('Y-m-d H:i:s');
 
-        $provider_ids = $service['providers'] ?? null;
+        $provider_ids = $service['providers'] ?? null; // upstream 1.6.0: extract providers
 
         unset($service['providers']);
 
-        if (!$this->db->update('services', $service, ['id' => $service['id']])) {
+        unset($service['tenant_id']); // Polaris: prevent tenant spoof
+        $this->db->where('id', $service['id']); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        if (!$this->db->update('services', $service)) {
             throw new RuntimeException('Could not update service.');
         }
 
@@ -238,7 +247,10 @@ class Services_model extends EA_Model
      */
     public function delete(int $service_id): void
     {
-        $this->db->delete('services', ['id' => $service_id]);
+        $this->assert_tenant();
+        $this->db->where('id', $service_id); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        $this->db->delete('services'); // Polaris: tenant-scoped
     }
 
     /**
@@ -252,7 +264,10 @@ class Services_model extends EA_Model
      */
     public function find(int $service_id): array
     {
-        $service = $this->db->get_where('services', ['id' => $service_id])->row_array();
+        $this->assert_tenant();
+        $service = $this->db->where('id', $service_id); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        $service = $this->db->get('services')->row_array(); // Polaris: tenant-scoped
 
         if (!$service) {
             throw new InvalidArgumentException('The provided service ID was not found in the database: ' . $service_id);
@@ -284,7 +299,9 @@ class Services_model extends EA_Model
         }
 
         // Check whether the service exists.
-        $query = $this->db->get_where('services', ['id' => $service_id]);
+        $query = $this->db->where('id', $service_id); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        $query = $this->db->get('services'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException('The provided service ID was not found in the database: ' . $service_id);
@@ -314,6 +331,9 @@ class Services_model extends EA_Model
         if ($without_private) {
             $this->db->where('services.is_private', false);
         }
+
+        $this->assert_tenant();
+        $this->add_tenant_scope('services.tenant_id'); // Polaris: tenant-scoped
 
         $services = $this->db
             ->distinct()
@@ -350,6 +370,8 @@ class Services_model extends EA_Model
         ?int $offset = null,
         ?string $order_by = null,
     ): array {
+        $this->assert_tenant();
+
         if ($where !== null) {
             $this->db->where($where);
         }
@@ -358,7 +380,8 @@ class Services_model extends EA_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $services = $this->db->get('services', $limit, $offset)->result_array();
+        $this->add_tenant_scope(); // Polaris: tenant-scoped
+        $services = $this->db->get('services', $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($services as &$service) {
             $this->cast($service);
@@ -374,7 +397,10 @@ class Services_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
-        return $this->db->from('services');
+        $this->assert_tenant();
+        $this->db->from('services'); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        return $this->db;
     }
 
     /**
@@ -389,6 +415,9 @@ class Services_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
+        $this->add_tenant_scope(); // Polaris: tenant-scoped
+
         $services = $this->db
             ->select()
             ->from('services')
@@ -453,9 +482,9 @@ class Services_model extends EA_Model
         foreach ($resources as $resource) {
             $service['category'] = match ($resource) {
                 'category' => $this->db
-                    ->get_where('service_categories', [
-                        'id' => $service['id_service_categories'] ?? ($service['serviceCategoryId'] ?? null),
-                    ])
+                    ->where('id', $service['id_service_categories'] ?? ($service['serviceCategoryId'] ?? null))
+                    // Polaris: tenant-scoped (needs add_tenant_scope)
+                    ->get('service_categories')
                     ->row_array(),
                 default => throw new InvalidArgumentException(
                     'The requested appointment relation is not supported: ' . $resource,

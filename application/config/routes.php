@@ -51,7 +51,13 @@
 
 require_once __DIR__ . '/../helpers/routes_helper.php';
 
-$route['default_controller'] = 'booking';
+// Root URL → marketing redirect (handled by Home controller).
+$route['default_controller'] = 'home';
+
+// Polaris public booking path: /book/{slug} → Booking::slug($slug).
+// Pattern: lowercase letter + up to 98 alphanumeric/hyphen chars = valid slug.
+// MUST appear before any catch-all routes.
+$route['book/([a-z][a-z0-9-]{0,98})'] = 'booking/slug/$1';
 
 $route['404_override'] = '';
 
@@ -106,19 +112,20 @@ header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 |
 */
 
-// Get allowed origins from configuration or use a whitelist
-$allowed_origins = defined('CORS_ALLOWED_ORIGINS') ? explode(',', CORS_ALLOWED_ORIGINS) : [];
+// Polaris: restrict CORS to the single trusted Polaris origin only.
+// Do NOT reflect arbitrary origins — combined with Allow-Credentials that would
+// let any site make credentialed cross-origin API calls. We populate the same
+// $allowed_origins / $request_origin vars the upstream preflight block below
+// reads, so the OPTIONS handler enforces this single-origin policy too.
+$_polaris_allowed_origin = getenv('POLARIS_CORS_ORIGIN') ?: 'https://getpolaris.my';
+$allowed_origins = [$_polaris_allowed_origin];
 $request_origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
-// Only allow CORS for configured origins, or same-origin requests
-if (!empty($request_origin) && (empty($allowed_origins) || in_array($request_origin, $allowed_origins, true))) {
+if ($request_origin !== '' && in_array($request_origin, $allowed_origins, true)) {
     header('Access-Control-Allow-Origin: ' . $request_origin);
     header('Access-Control-Allow-Credentials: true');
-} elseif (empty($request_origin)) {
-    // No Origin header - same-origin request, no CORS needed
-} else {
-    // Origin not in whitelist - don't set CORS headers (will fail CORS check)
 }
+unset($_polaris_allowed_origin);
 
 if (
     isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']) &&
@@ -198,6 +205,8 @@ $route['api/v1/settings/(:any)']['get'] = 'api/v1/settings_api_v1/show/$1';
 $route['api/v1/settings/(:any)']['put'] = 'api/v1/settings_api_v1/update/$1';
 
 $route['api/v1/availabilities']['get'] = 'api/v1/availabilities_api_v1/get';
+
+$route['api/v1/internal/tenants/sync']['post'] = 'api/v1/internal_api_v1/tenants_sync';
 
 /*
 | -------------------------------------------------------------------------

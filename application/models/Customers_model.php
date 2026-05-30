@@ -18,7 +18,7 @@
  *
  * @package Models
  */
-class Customers_model extends EA_Model
+class Customers_model extends MY_Model
 {
     /**
      * @var array
@@ -86,7 +86,7 @@ class Customers_model extends EA_Model
     {
         // If a customer ID is provided then check whether the record really exists in the database.
         if (!empty($customer['id'])) {
-            $count = $this->db->get_where('users', ['id' => $customer['id']])->num_rows();
+            $count = $this->db->where('id', $customer['id'])->where('tenant_id', MY_Controller::$tenant_id)->get('users')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -131,6 +131,7 @@ class Customers_model extends EA_Model
                 ->join('roles', 'roles.id = users.id_roles', 'inner')
                 ->where('roles.slug', DB_SLUG_CUSTOMER)
                 ->where('users.email', $customer['email'])
+                ->where('users.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
                 ->where('users.id !=', $customer_id)
                 ->get()
                 ->num_rows();
@@ -159,6 +160,7 @@ class Customers_model extends EA_Model
         ?int $offset = null,
         ?string $order_by = null,
     ): array {
+        $this->assert_tenant();
         $role_id = $this->get_customer_role_id();
 
         if ($where !== null) {
@@ -169,7 +171,7 @@ class Customers_model extends EA_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $customers = $this->db->get_where('users', ['id_roles' => $role_id], $limit, $offset)->result_array();
+        $customers = $this->db->where('tenant_id', MY_Controller::$tenant_id)->get_where('users', ['id_roles' => $role_id], $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($customers as &$customer) {
             $this->cast($customer);
@@ -261,11 +263,12 @@ class Customers_model extends EA_Model
      *
      * @throws RuntimeException
      */
-    protected function insert(array $customer): int
+    public function insert(array $customer): int
     {
         $customer['create_datetime'] = date('Y-m-d H:i:s');
         $customer['update_datetime'] = date('Y-m-d H:i:s');
         $customer['id_roles'] = $this->get_customer_role_id();
+        $customer = $this->inject_tenant_id($customer); // Polaris: tenant-scoped
 
         if (!$this->db->insert('users', $customer)) {
             throw new RuntimeException('Could not insert customer.');
@@ -283,13 +286,12 @@ class Customers_model extends EA_Model
      *
      * @throws RuntimeException
      */
-    protected function update(array $customer): int
+    public function update(array $customer): int
     {
+        $this->assert_tenant();
         $customer['update_datetime'] = date('Y-m-d H:i:s');
-
-        if (!$this->db->update('users', $customer, ['id' => $customer['id']])) {
-            throw new RuntimeException('Could not update customer.');
-        }
+        unset($customer['tenant_id']); // prevent spoof
+        $this->db->where('id', $customer['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('users', $customer); // Polaris: tenant-scoped
 
         return $customer['id'];
     }
@@ -303,7 +305,19 @@ class Customers_model extends EA_Model
      */
     public function delete(int $customer_id): void
     {
-        // Anonymize consent records before deleting customer (GDPR compliance)
+        $this->assert_tenant();
+
+        // Polaris: confirm the customer belongs to the current tenant before touching
+        // anything — fail closed on cross-tenant access.
+        $customer = $this->db
+            ->get_where('users', ['id' => $customer_id, 'tenant_id' => MY_Controller::$tenant_id])
+            ->row_array();
+
+        if (empty($customer)) {
+            return;
+        }
+
+        // Anonymize consent records before deleting customer (GDPR compliance, upstream #535)
         $this->db->where('id_users', $customer_id);
         $this->db->update('consents', [
             'id_users' => null,
@@ -313,8 +327,6 @@ class Customers_model extends EA_Model
         ]);
 
         // Also anonymize any consents that match the customer's email
-        $customer = $this->db->get_where('users', ['id' => $customer_id])->row_array();
-
         if (!empty($customer['email'])) {
             $this->db->where('email', $customer['email']);
             $this->db->where('id_users IS NULL', null, false);
@@ -325,7 +337,8 @@ class Customers_model extends EA_Model
             ]);
         }
 
-        $this->db->delete('users', ['id' => $customer_id]);
+        // Polaris: tenant-scoped delete (prevents cross-tenant customer deletion)
+        $this->db->where('id', $customer_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('users');
     }
 
     /**
@@ -337,7 +350,8 @@ class Customers_model extends EA_Model
      */
     public function find(int $customer_id): array
     {
-        $customer = $this->db->get_where('users', ['id' => $customer_id])->row_array();
+        $this->assert_tenant();
+        $customer = $this->db->where('id', $customer_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users')->row_array(); // Polaris: tenant-scoped
 
         if (!$customer) {
             throw new InvalidArgumentException(
@@ -371,7 +385,7 @@ class Customers_model extends EA_Model
         }
 
         // Check whether the customer exists.
-        $query = $this->db->get_where('users', ['id' => $customer_id]);
+        $query = $this->db->where('id', $customer_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException(
@@ -398,9 +412,10 @@ class Customers_model extends EA_Model
      */
     public function query(): CI_DB_query_builder
     {
+        $this->assert_tenant();
         $role_id = $this->get_customer_role_id();
 
-        return $this->db->from('users')->where('id_roles', $role_id);
+        return $this->db->from('users')->where('id_roles', $role_id)->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
     }
 
     /**
@@ -415,12 +430,14 @@ class Customers_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant();
         $role_id = $this->get_customer_role_id();
 
         $customers = $this->db
             ->select()
             ->from('users')
             ->where('id_roles', $role_id)
+            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->like('first_name', $keyword)
             ->or_like('last_name', $keyword)

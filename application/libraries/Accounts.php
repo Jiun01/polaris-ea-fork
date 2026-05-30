@@ -62,12 +62,12 @@ class Accounts
         $salt = $user_settings['salt'] ?? '';
         $stored_hash = $user_settings['password'] ?? '';
 
-        // Use the new verify_password function for secure comparison
+        // Use the new verify_password function for secure comparison (upstream 1.6.0)
         if (!verify_password($salt, $password, $stored_hash)) {
             return null;
         }
 
-        // Rehash password if using legacy algorithm (upgrade to bcrypt)
+        // Rehash password if using legacy algorithm (upgrade to bcrypt) (upstream 1.6.0)
         if (password_needs_rehash_check($stored_hash)) {
             $new_hash = hash_password($salt, $password);
             $this->CI->db->update(
@@ -75,6 +75,12 @@ class Accounts
                 ['password' => $new_hash],
                 ['id_users' => $user_settings['id_users']],
             );
+        }
+
+        // Polaris: set tenant context from the user_settings row so MY_Model scoping
+        // works during the rest of the login flow (users_model->find, roles_model->find).
+        if (!empty($user_settings['tenant_id'])) {
+            MY_Controller::set_tenant_context($user_settings['tenant_id']);
         }
 
         $user = $this->CI->users_model->find($user_settings['id_users']);

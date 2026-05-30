@@ -80,12 +80,29 @@ class Instance
     /**
      * Seed the database with test data.
      *
+     * Creates a default 'administrator' / 'administrator' admin + sample
+     * Service / Jane Doe provider / James Doe customer rows.
+     *
+     * **Polaris guard (B24 — Phase 3):** this method is fail-closed in any
+     * environment except explicit testing. The default `administrator` /
+     * `administrator` credential is a security incident if it ever lands
+     * in a production database. Set `POLARIS_SEED_TEST_DATA=1` in the
+     * environment (CI workflow only) to allow the seed to run.
+     *
      * @return string Return's the administrator user password.
      *
+     * @throws RuntimeException When POLARIS_SEED_TEST_DATA is not set to "1".
      * @throws Exception
      */
     public function seed(): string
     {
+        if (getenv('POLARIS_SEED_TEST_DATA') !== '1') {
+            throw new RuntimeException(
+                'Instance::seed() is a test-only fixture seeder. Refusing to run because POLARIS_SEED_TEST_DATA is not set to "1". '
+                . 'This seeder creates a default administrator/administrator credential — running it in production is a security incident.'
+            );
+        }
+
         // Settings
 
         setting([

@@ -18,7 +18,7 @@
  *
  * @package Models
  */
-class Working_plan_exceptions_model extends EA_Model
+class Working_plan_exceptions_model extends MY_Model
 {
     /**
      * @var array
@@ -74,6 +74,7 @@ class Working_plan_exceptions_model extends EA_Model
     {
         // If a working plan exception ID is provided then check whether the record really exists in the database.
         if (!empty($working_plan_exception['id'])) {
+            $this->add_tenant_scope(); // Polaris: tenant-scoped existence check
             $count = $this->db
                 ->get_where('working_plan_exceptions', ['id' => $working_plan_exception['id']])
                 ->num_rows();
@@ -138,6 +139,8 @@ class Working_plan_exceptions_model extends EA_Model
         $working_plan_exception['create_datetime'] = date('Y-m-d H:i:s');
         $working_plan_exception['update_datetime'] = date('Y-m-d H:i:s');
 
+        $working_plan_exception = $this->inject_tenant_id($working_plan_exception); // Polaris: tenant-scoped
+
         if (!$this->db->insert('working_plan_exceptions', $working_plan_exception)) {
             throw new RuntimeException('Could not insert working plan exception.');
         }
@@ -156,7 +159,11 @@ class Working_plan_exceptions_model extends EA_Model
      */
     protected function update(array $working_plan_exception): int
     {
+        $this->assert_tenant(); // Polaris: tenant-scoped
         $working_plan_exception['update_datetime'] = date('Y-m-d H:i:s');
+
+        unset($working_plan_exception['tenant_id']); // Polaris: prevent tenant spoof
+        $this->add_tenant_scope();
 
         if (
             !$this->db->update('working_plan_exceptions', $working_plan_exception, [
@@ -178,6 +185,8 @@ class Working_plan_exceptions_model extends EA_Model
      */
     public function delete(int $working_plan_exception_id): void
     {
+        $this->assert_tenant(); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
         $this->db->delete('working_plan_exceptions', ['id' => $working_plan_exception_id]);
     }
 
@@ -192,6 +201,8 @@ class Working_plan_exceptions_model extends EA_Model
      */
     public function find(int $working_plan_exception_id): array
     {
+        $this->assert_tenant(); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
         $working_plan_exception = $this->db
             ->get_where('working_plan_exceptions', ['id' => $working_plan_exception_id])
             ->row_array();
@@ -228,6 +239,8 @@ class Working_plan_exceptions_model extends EA_Model
         }
 
         // Check whether the record exists.
+        $this->assert_tenant(); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
         $query = $this->db->get_where('working_plan_exceptions', ['id' => $working_plan_exception_id]);
 
         if (!$query->num_rows()) {
@@ -262,6 +275,8 @@ class Working_plan_exceptions_model extends EA_Model
      */
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
+        $this->assert_tenant(); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
         $working_plan_exceptions = $this->db
             ->select()
             ->from('working_plan_exceptions')
@@ -298,6 +313,9 @@ class Working_plan_exceptions_model extends EA_Model
         ?int $offset = null,
         ?string $order_by = null,
     ): array {
+        $this->assert_tenant(); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+
         if ($where !== null) {
             $this->db->where($where);
         }
@@ -407,6 +425,7 @@ class Working_plan_exceptions_model extends EA_Model
     public function get_for_period(int $provider_id, string $start_date, string $end_date): array
     {
         // Find exceptions that overlap with the given period
+        $this->add_tenant_scope(); // Polaris: tenant-scoped
         return $this->db
             ->select()
             ->from('working_plan_exceptions')
@@ -443,6 +462,7 @@ class Working_plan_exceptions_model extends EA_Model
      */
     public function get_by_provider(int $provider_id): array
     {
+        $this->add_tenant_scope(); // Polaris: tenant-scoped
         $exceptions = $this->db
             ->select()
             ->from('working_plan_exceptions')
@@ -491,6 +511,7 @@ class Working_plan_exceptions_model extends EA_Model
      */
     public function get_all_by_provider(int $provider_id): array
     {
+        $this->add_tenant_scope(); // Polaris: tenant-scoped
         $exceptions = $this->db
             ->select()
             ->from('working_plan_exceptions')
@@ -535,6 +556,7 @@ class Working_plan_exceptions_model extends EA_Model
      */
     public function find_by_provider_and_date(int $provider_id, string $date): ?array
     {
+        $this->add_tenant_scope(); // Polaris: tenant-scoped
         $working_plan_exception = $this->db
             ->select()
             ->from('working_plan_exceptions')
@@ -562,6 +584,8 @@ class Working_plan_exceptions_model extends EA_Model
     public function delete_by_provider_and_date(int $provider_id, string $date): void
     {
         // Delete any exception where the date falls within the range
+        $this->assert_tenant(); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
         $this->db
             ->where('id_users_provider', $provider_id)
             ->where('start_date <=', $date)

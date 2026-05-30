@@ -51,6 +51,7 @@
     'manage_mode' => vars('manage_mode'),
     'display_terms_and_conditions' => vars('display_terms_and_conditions'),
     'display_privacy_policy' => vars('display_privacy_policy'),
+    'polaris_turnstile_sitekey' => vars('polaris_turnstile_sitekey'),
 ]); ?>
 
 <?php endif; ?>
@@ -59,6 +60,9 @@
 
 <?php section('scripts'); ?>
 
+<?php if (vars('polaris_turnstile_sitekey')): ?>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<?php endif; ?>
 <script src="<?= asset_url('assets/js/utils/lang.js') ?>"></script>
 <script src="<?= asset_url('assets/js/utils/ui.js') ?>"></script>
 <script src="<?= asset_url('assets/js/http/booking_http_client.js') ?>"></script>
