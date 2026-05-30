@@ -361,8 +361,11 @@ class Booking extends EA_Controller
     public function register(): void
     {
         try {
-            // IP rate limit: 10 booking attempts per IP per hour.
-            rate_limit($this->input->ip_address(), 10, 3600);
+            // IP rate limit: 10 booking *submissions* per IP per hour.
+            // Use a namespaced key so page loads and AJAX calls (which also run
+            // through EA_Controller::__construct → rate_limit with default params)
+            // do not share this counter and prematurely exhaust the 10-per-hour limit.
+            rate_limit('booking_register_' . $this->input->ip_address(), 10, 3600);
 
             $disable_booking = setting('disable_booking');
 

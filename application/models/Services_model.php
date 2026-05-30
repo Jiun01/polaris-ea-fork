@@ -80,7 +80,9 @@ class Services_model extends MY_Model
     {
         // If a service ID is provided then check whether the record really exists in the database.
         if (!empty($service['id'])) {
-            $count = $this->db->where('id', $service['id'])->where('tenant_id', MY_Controller::$tenant_id)->get('services')->num_rows(); // Polaris: tenant-scoped
+            $count = $this->db->where('id', $service['id']);
+            $this->add_tenant_scope(); // Polaris: tenant-scoped
+            $count = $this->db->get('services')->num_rows(); // Polaris: tenant-scoped
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -96,9 +98,9 @@ class Services_model extends MY_Model
 
         // If a category was provided then make sure it really exists in the database.
         if (!empty($service['id_service_categories'])) {
+            $this->add_tenant_scope(); // Polaris: tenant-scoped
             $count = $this->db
                 ->where('id', $service['id_service_categories'])
-                ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
                 ->get('service_categories')
                 ->num_rows();
 
@@ -189,7 +191,9 @@ class Services_model extends MY_Model
         $this->assert_tenant();
         $service['update_datetime'] = date('Y-m-d H:i:s');
         unset($service['tenant_id']); // prevent spoof
-        $this->db->where('id', $service['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('services', $service); // Polaris: tenant-scoped
+        $this->db->where('id', $service['id']); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        $this->db->update('services', $service); // Polaris: tenant-scoped
 
         return $service['id'];
     }
@@ -204,7 +208,9 @@ class Services_model extends MY_Model
     public function delete(int $service_id): void
     {
         $this->assert_tenant();
-        $this->db->where('id', $service_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('services'); // Polaris: tenant-scoped
+        $this->db->where('id', $service_id); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        $this->db->delete('services'); // Polaris: tenant-scoped
     }
 
     /**
@@ -219,7 +225,9 @@ class Services_model extends MY_Model
     public function find(int $service_id): array
     {
         $this->assert_tenant();
-        $service = $this->db->where('id', $service_id)->where('tenant_id', MY_Controller::$tenant_id)->get('services')->row_array(); // Polaris: tenant-scoped
+        $service = $this->db->where('id', $service_id); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        $service = $this->db->get('services')->row_array(); // Polaris: tenant-scoped
 
         if (!$service) {
             throw new InvalidArgumentException('The provided service ID was not found in the database: ' . $service_id);
@@ -251,7 +259,9 @@ class Services_model extends MY_Model
         }
 
         // Check whether the service exists.
-        $query = $this->db->where('id', $service_id)->where('tenant_id', MY_Controller::$tenant_id)->get('services'); // Polaris: tenant-scoped
+        $query = $this->db->where('id', $service_id); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        $query = $this->db->get('services'); // Polaris: tenant-scoped
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException('The provided service ID was not found in the database: ' . $service_id);
@@ -283,6 +293,7 @@ class Services_model extends MY_Model
         }
 
         $this->assert_tenant();
+        $this->add_tenant_scope('services.tenant_id'); // Polaris: tenant-scoped
 
         $services = $this->db
             ->distinct()
@@ -292,7 +303,6 @@ class Services_model extends MY_Model
             ->from('services')
             ->join('services_providers', 'services_providers.id_services = services.id', 'inner')
             ->join('service_categories', 'service_categories.id = services.id_service_categories', 'left')
-            ->where('services.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->order_by('name ASC')
             ->get()
             ->result_array();
@@ -330,7 +340,8 @@ class Services_model extends MY_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $services = $this->db->where('tenant_id', MY_Controller::$tenant_id)->get('services', $limit, $offset)->result_array(); // Polaris: tenant-scoped
+        $this->add_tenant_scope(); // Polaris: tenant-scoped
+        $services = $this->db->get('services', $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($services as &$service) {
             $this->cast($service);
@@ -347,7 +358,9 @@ class Services_model extends MY_Model
     public function query(): CI_DB_query_builder
     {
         $this->assert_tenant();
-        return $this->db->from('services')->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
+        $this->db->from('services'); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        return $this->db;
     }
 
     /**
@@ -363,11 +376,11 @@ class Services_model extends MY_Model
     public function search(string $keyword, ?int $limit = null, ?int $offset = null, ?string $order_by = null): array
     {
         $this->assert_tenant();
+        $this->add_tenant_scope(); // Polaris: tenant-scoped
 
         $services = $this->db
             ->select()
             ->from('services')
-            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->like('name', $keyword)
             ->or_like('description', $keyword)
@@ -403,7 +416,7 @@ class Services_model extends MY_Model
             $service['category'] = match ($resource) {
                 'category' => $this->db
                     ->where('id', $service['id_service_categories'] ?? ($service['serviceCategoryId'] ?? null))
-                    ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
+                    // Polaris: tenant-scoped (needs add_tenant_scope)
                     ->get('service_categories')
                     ->row_array(),
                 default => throw new InvalidArgumentException(

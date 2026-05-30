@@ -71,8 +71,14 @@ class Api
         }
 
         try {
-            // Bearer token.
-            $api_token = setting('api_token');
+            // Bearer token — query directly so it works before a tenant is
+            // established (setting() returns null when tenant_id is empty).
+            $api_token_row = $this->CI->db
+                ->where('name', 'api_token')
+                ->where('tenant_id', '')
+                ->get('ea_settings')
+                ->row_array();
+            $api_token = $api_token_row['value'] ?? '';
 
             if (!empty($api_token) && $api_token === $this->get_bearer_token()) {
                 return;

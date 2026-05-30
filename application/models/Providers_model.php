@@ -1,4 +1,4 @@
-<?php defined('BASEPATH') or exit('No direct script access allowed');
+﻿<?php defined('BASEPATH') or exit('No direct script access allowed');
 
 /* ----------------------------------------------------------------------------
  * Easy!Appointments - Online Appointment Scheduler
@@ -83,7 +83,10 @@ class Providers_model extends MY_Model
     {
         // If a provider ID is provided then check whether the record really exists in the database.
         if (!empty($provider['id'])) {
-            $count = $this->db->where('id', $provider['id'])->where('tenant_id', MY_Controller::$tenant_id)->get('users')->num_rows(); // Polaris: tenant-scoped
+            // Polaris: tenant-scoped
+            $this->db->where('id', $provider['id']);
+            $this->add_tenant_scope();
+            $count = $this->db->get('users')->num_rows();
 
             if (!$count) {
                 throw new InvalidArgumentException(
@@ -157,13 +160,13 @@ class Providers_model extends MY_Model
         // Make sure the email address is unique.
         $provider_id = $provider['id'] ?? null;
 
+        $this->add_tenant_scope('users.tenant_id'); // Polaris: tenant-scoped
         $count = $this->db
             ->select()
             ->from('users')
             ->join('roles', 'roles.id = users.id_roles', 'inner')
             ->where('roles.slug', DB_SLUG_PROVIDER)
             ->where('users.email', $provider['email'])
-            ->where('users.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->where('users.id !=', $provider_id)
             ->get()
             ->num_rows();
@@ -224,7 +227,8 @@ class Providers_model extends MY_Model
             $this->db->order_by($this->quote_order_by($order_by));
         }
 
-        $providers = $this->db->where('tenant_id', MY_Controller::$tenant_id)->get_where('users', ['id_roles' => $role_id], $limit, $offset)->result_array(); // Polaris: tenant-scoped
+        $this->add_tenant_scope(); // Polaris: tenant-scoped
+        $providers = $this->db->get_where('users', ['id_roles' => $role_id], $limit, $offset)->result_array(); // Polaris: tenant-scoped
 
         foreach ($providers as &$provider) {
             $this->cast($provider);
@@ -342,7 +346,10 @@ class Providers_model extends MY_Model
         $count = $this->db->get_where('user_settings', ['id_users' => $provider_id])->num_rows();
 
         if (!$count) {
-            $this->db->insert('user_settings', ['id_users' => $provider_id]);
+            // Polaris: stamp tenant_id on the user_settings row so booking slug
+            // lookup (which queries user_settings.tenant_id) resolves correctly.
+            $settings_tenant_id = MY_Controller::$global_admin_mode ? '' : (MY_Controller::$tenant_id ?? '');
+            $this->db->insert('user_settings', ['id_users' => $provider_id, 'tenant_id' => $settings_tenant_id]);
         }
 
         foreach ($settings as $name => $value) {
@@ -412,7 +419,9 @@ class Providers_model extends MY_Model
             $settings['password'] = hash_password($existing_settings['salt'], $settings['password']);
         }
 
-        $this->db->where('id', $provider['id'])->where('tenant_id', MY_Controller::$tenant_id)->update('users', $provider); // Polaris: tenant-scoped
+        $this->db->where('id', $provider['id']); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        $this->db->update('users', $provider);
 
         $this->set_settings($provider['id'], $settings);
         $this->set_service_ids($provider['id'], $service_ids);
@@ -451,7 +460,9 @@ class Providers_model extends MY_Model
     public function delete(int $provider_id): void
     {
         $this->assert_tenant();
-        $this->db->where('id', $provider_id)->where('tenant_id', MY_Controller::$tenant_id)->delete('users'); // Polaris: tenant-scoped
+        $this->db->where('id', $provider_id); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        $this->db->delete('users');
     }
 
     /**
@@ -475,7 +486,9 @@ class Providers_model extends MY_Model
         }
 
         // Check whether the provider exists.
-        $query = $this->db->where('id', $provider_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users'); // Polaris: tenant-scoped
+        $this->db->where('id', $provider_id); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        $query = $this->db->get('users');
 
         if (!$query->num_rows()) {
             throw new InvalidArgumentException(
@@ -555,7 +568,7 @@ class Providers_model extends MY_Model
             'id_roles' => $this->db->get_where('roles', ['slug' => DB_SLUG_PROVIDER])->row()->id,
         ];
 
-        $where['tenant_id'] = MY_Controller::$tenant_id; // Polaris: tenant-scoped
+        if (!MY_Controller::$global_admin_mode) { $where['tenant_id'] = MY_Controller::$tenant_id; } // Polaris: tenant-scoped
         if ($this->db->get_where('users', $where)->num_rows() === 0) {
             throw new InvalidArgumentException('Provider ID was not found in the database: ' . $provider_id);
         }
@@ -588,7 +601,9 @@ class Providers_model extends MY_Model
     public function find(int $provider_id): array
     {
         $this->assert_tenant();
-        $provider = $this->db->where('id', $provider_id)->where('tenant_id', MY_Controller::$tenant_id)->get('users')->row_array(); // Polaris: tenant-scoped
+        $this->db->where('id', $provider_id); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        $provider = $this->db->get('users')->row_array();
 
         if (!$provider) {
             throw new InvalidArgumentException(
@@ -645,13 +660,13 @@ class Providers_model extends MY_Model
 
         $this->assert_tenant();
 
+        $this->add_tenant_scope('users.tenant_id'); // Polaris: tenant-scoped
         $providers = $this->db
             ->select('users.*')
             ->from('users')
             ->join('roles', 'roles.id = users.id_roles', 'inner')
             ->join('services_providers', 'services_providers.id_users = users.id', 'inner')
             ->where('roles.slug', DB_SLUG_PROVIDER)
-            ->where('users.tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->order_by('first_name ASC, last_name ASC, email ASC')
             ->group_by('users.id')
             ->get()
@@ -676,7 +691,9 @@ class Providers_model extends MY_Model
         $this->assert_tenant();
         $role_id = $this->get_provider_role_id();
 
-        return $this->db->from('users')->where('id_roles', $role_id)->where('tenant_id', MY_Controller::$tenant_id); // Polaris: tenant-scoped
+        $this->db->from('users')->where('id_roles', $role_id); // Polaris: tenant-scoped
+        $this->add_tenant_scope();
+        return $this->db;
     }
 
     /**
@@ -694,11 +711,11 @@ class Providers_model extends MY_Model
         $this->assert_tenant();
         $role_id = $this->get_provider_role_id();
 
+        $this->add_tenant_scope(); // Polaris: tenant-scoped
         $providers = $this->db
             ->select()
             ->from('users')
             ->where('id_roles', $role_id)
-            ->where('tenant_id', MY_Controller::$tenant_id) // Polaris: tenant-scoped
             ->group_start()
             ->like('first_name', $keyword)
             ->or_like('last_name', $keyword)
