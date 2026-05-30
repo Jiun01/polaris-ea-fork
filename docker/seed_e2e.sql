@@ -36,14 +36,14 @@ ON DUPLICATE KEY UPDATE first_name=VALUES(first_name);
 SET @B_PROVIDER_ID = LAST_INSERT_ID();
 
 -- Service for Tenant A
-INSERT INTO ea_services (tenant_id, name, duration, price, currency, description, location, availabilities_type, attendants_number, is_private)
-VALUES (@A_UUID, 'E2E-Service-A', 60, 0, 'MYR', 'Test service A', '', 'flexible', 1, 0)
+INSERT INTO ea_services (tenant_id, name, duration, price, currency, description, location, slot_interval, attendants_number, is_private)
+VALUES (@A_UUID, 'E2E-Service-A', 60, 0, 'MYR', 'Test service A', '', 15, 1, 0)
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 SET @A_SERVICE_ID = LAST_INSERT_ID();
 
 -- Service for Tenant B
-INSERT INTO ea_services (tenant_id, name, duration, price, currency, description, location, availabilities_type, attendants_number, is_private)
-VALUES (@B_UUID, 'B-Only-Service', 60, 0, 'MYR', 'Should never leak to A', '', 'flexible', 1, 0)
+INSERT INTO ea_services (tenant_id, name, duration, price, currency, description, location, slot_interval, attendants_number, is_private)
+VALUES (@B_UUID, 'B-Only-Service', 60, 0, 'MYR', 'Should never leak to A', '', 15, 1, 0)
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 SET @B_SERVICE_ID = LAST_INSERT_ID();
 

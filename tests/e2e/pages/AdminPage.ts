@@ -33,7 +33,8 @@ export class AdminPage {
     }
 
     async gotoLogin(): Promise<void> {
-        await this.page.goto('/index.php/backend');
+        // EA 1.6.0 split login into its own /login page (was /backend in 1.5.2).
+        await this.page.goto('/index.php/login');
         await this.page.waitForLoadState('networkidle');
     }
 

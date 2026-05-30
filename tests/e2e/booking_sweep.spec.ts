@@ -110,7 +110,7 @@ test.describe('§6 E2E Acceptance Sweep', () => {
         const ctx   = await pwRequest.newContext();
         const today = new Date().toISOString().slice(0, 10);
         const res   = await ctx.get(
-            `/api/v1/availabilities?service_id=1&provider_id=any&date=${today}`,
+            `/api/v1/availabilities?serviceId=1&providerId=1&date=${today}`,
             { headers: { Authorization: `Bearer ${makeJwt(TENANT_A_ID)}` } },
         );
         expect([200, 404]).toContain(res.status());

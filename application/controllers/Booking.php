@@ -407,14 +407,16 @@ class Booking extends EA_Controller
         try {
             method('post'); // upstream 1.6.0: per-request method allow-listing (#1754)
 
-            // Verify CSRF token for booking submissions (upstream 1.6.0)
-            $this->verify_csrf_token();
-
             // Polaris: IP rate limit — 10 booking *submissions* per IP per hour.
-            // Use a namespaced key so page loads and AJAX calls (which also run
+            // Runs as the OUTERMOST gate (before CSRF) so a flood of POSTs from a
+            // single IP is capped regardless of whether they carry a valid CSRF
+            // token. Namespaced key so page loads and AJAX calls (which also run
             // through EA_Controller::__construct → rate_limit with default params)
             // do not share this counter and prematurely exhaust the 10-per-hour limit.
             rate_limit('booking_register_' . $this->input->ip_address(), 10, 3600);
+
+            // Verify CSRF token for booking submissions (upstream 1.6.0)
+            $this->verify_csrf_token();
 
             $disable_booking = setting('disable_booking');
 

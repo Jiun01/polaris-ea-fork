@@ -37,27 +37,30 @@ test.describe('Bearer JWT authentication', () => {
     test('no Authorization header → 401 token_missing', async () => {
         const { status, body } = await probe(null);
         expect(status).toBe(401);
-        expect(body['error']).toBe('token_missing');
+        expect(body['message']).toBe('token_missing');
     });
 
     test('Authorization: Basic (wrong scheme) → 401 token_missing', async () => {
         const { status, body } = await probe('Basic dXNlcjpwYXNz');
         expect(status).toBe(401);
-        expect(body['error']).toBe('token_missing');
+        expect(body['message']).toBe('token_missing');
     });
 
     test('Authorization: Bearer (empty value) → 401 token_missing', async () => {
         const { status, body } = await probe('Bearer ');
         expect(status).toBe(401);
-        expect(body['error']).toBe('token_missing');
+        expect(body['message']).toBe('token_missing');
     });
 
-    test('Authorization: Bearer value > 8 KB → 401 token_missing', async () => {
-        // BearerAuthHook caps the header at 8192 bytes before parsing.
+    test('Authorization: Bearer value > 8 KB → rejected (400 nginx / 401 hook)', async () => {
+        // Defense in depth: nginx rejects oversized request headers with 400 before
+        // PHP; if it ever reaches PHP, BearerAuthHook caps at 8192 bytes → 401.
         const oversized = 'Bearer ' + 'x'.repeat(8200);
         const { status, body } = await probe(oversized);
-        expect(status).toBe(401);
-        expect(body['error']).toBe('token_missing');
+        expect([400, 401]).toContain(status);
+        if (status === 401) {
+            expect(body['message']).toBe('token_missing');
+        }
     });
 
     // ── Signature / structure errors ─────────────────────────────────────────
@@ -66,13 +69,13 @@ test.describe('Bearer JWT authentication', () => {
         const token = makeJwt(TENANT_A_ID) + 'XXXXXX';
         const { status, body } = await probe(`Bearer ${token}`);
         expect(status).toBe(401);
-        expect(body['error']).toBe('token_invalid');
+        expect(body['message']).toBe('token_invalid');
     });
 
     test('completely non-JWT string → 401 token_invalid', async () => {
         const { status, body } = await probe('Bearer notavalidjwtatall');
         expect(status).toBe(401);
-        expect(body['error']).toBe('token_invalid');
+        expect(body['message']).toBe('token_invalid');
     });
 
     // ── Claim validation errors ───────────────────────────────────────────────
@@ -81,35 +84,35 @@ test.describe('Bearer JWT authentication', () => {
         const token = makeExpiredJwt(TENANT_A_ID);
         const { status, body } = await probe(`Bearer ${token}`);
         expect(status).toBe(401);
-        expect(body['error']).toBe('token_expired');
+        expect(body['message']).toBe('token_expired');
     });
 
     test('wrong iss ("notpolaris") → 401 token_invalid', async () => {
         const token = makeJwt(TENANT_A_ID, { iss: 'notpolaris' });
         const { status, body } = await probe(`Bearer ${token}`);
         expect(status).toBe(401);
-        expect(body['error']).toBe('token_invalid');
+        expect(body['message']).toBe('token_invalid');
     });
 
     test('wrong aud ("not-ea-fork") → 401 token_invalid', async () => {
         const token = makeJwt(TENANT_A_ID, { aud: 'not-ea-fork' });
         const { status, body } = await probe(`Bearer ${token}`);
         expect(status).toBe(401);
-        expect(body['error']).toBe('token_invalid');
+        expect(body['message']).toBe('token_invalid');
     });
 
     test('non-UUID tenant_id claim → 401 token_invalid', async () => {
         const token = makeJwt(TENANT_A_ID, { tenant_id: 'not-a-uuid' });
         const { status, body } = await probe(`Bearer ${token}`);
         expect(status).toBe(401);
-        expect(body['error']).toBe('token_invalid');
+        expect(body['message']).toBe('token_invalid');
     });
 
     test('non-UUID tenant_branch_id claim → 401 token_invalid', async () => {
         const token = makeJwt(TENANT_A_ID, { tenant_branch_id: 'bad-branch-id' });
         const { status, body } = await probe(`Bearer ${token}`);
         expect(status).toBe(401);
-        expect(body['error']).toBe('token_invalid');
+        expect(body['message']).toBe('token_invalid');
     });
 
     // ── Happy path ────────────────────────────────────────────────────────────

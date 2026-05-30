@@ -64,8 +64,8 @@ test.describe('Cross-tenant API isolation (§6.5)', () => {
                 headers: { Authorization: `Bearer ${makeExpiredJwt(TENANT_A_ID)}` },
             });
             expect(res.status()).toBe(401);
-            const body = await res.json() as { error?: string };
-            expect(body.error).toBe('token_expired');
+            const body = await res.json() as { message?: string };
+            expect(body.message).toBe('token_expired');
             await ctx.dispose();
         });
 
