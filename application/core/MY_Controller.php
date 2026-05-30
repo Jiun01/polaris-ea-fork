@@ -13,6 +13,9 @@ class MY_Controller extends CI_Controller
     public static ?string $tenant_id        = null;
     public static ?string $tenant_branch_id = null;
 
+    /** True when a global admin API token authenticated the request (no tenant scope). */
+    public static bool $global_admin_mode = false;
+
     // -------------------------------------------------------------------------
     // Context setters
     // -------------------------------------------------------------------------
@@ -27,6 +30,12 @@ class MY_Controller extends CI_Controller
     {
         self::$tenant_id        = null;
         self::$tenant_branch_id = null;
+        self::$global_admin_mode = false;
+    }
+
+    public static function set_global_admin_mode(): void
+    {
+        self::$global_admin_mode = true;
     }
 
     // -------------------------------------------------------------------------
@@ -47,8 +56,11 @@ class MY_Controller extends CI_Controller
     public static function from_bearer(string $token): void
     {
         // get_instance() is null at pre_controller time (CI superobject not yet
-        // assigned to the static $_CI slot). Read env vars directly — polaris.php
-        // reads these same vars, so no config-layer duplication.
+        // assigned to the static $_CI slot). Read env vars directly.
+        // NOTE: uses POLARIS_EA_JWT_SECRET (from the base docker-compose env block)
+        // because that name is reliably passed to FPM workers via clear_env=no.
+        // EA_JWT_SIGNING_SECRET is the same secret but injected via override/.env
+        // substitution and is not visible in the FPM web context.
         $secret   = (string) (getenv('POLARIS_EA_JWT_SECRET') ?: '');
         $issuer   = 'polaris';
         $audience = 'ea-fork';

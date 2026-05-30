@@ -11,7 +11,7 @@
 // ── Bearer JWT (API path) ────────────────────────────────────────────────────
 // Shared secret between Polaris (iss) and EA fork (aud). Rotate quarterly.
 // Min 32 bytes of entropy. Store encrypted in Polaris tenant_secrets table.
-$config['polaris_jwt_secret']   = getenv('POLARIS_EA_JWT_SECRET') ?: '';
+$config['polaris_jwt_secret']   = getenv('EA_JWT_SIGNING_SECRET') ?: '';
 $config['polaris_jwt_issuer']   = 'polaris';
 $config['polaris_jwt_audience'] = 'ea-fork';
 
