@@ -1,9 +1,9 @@
 # Multi-Tenancy Codemap
 
-<!-- Generated: 2026-05-26 | Files scanned: 18 | Token estimate: ~1100 -->
+<!-- Generated: 2026-05-30 | Files scanned: 18 | Token estimate: ~1100 -->
 
-**Last Updated:** 2026-05-26
-**Entry Points:** MY_Controller::set_tenant_context(), MY_Model CRUD methods, migrations 061/062
+**Last Updated:** 2026-05-30
+**Entry Points:** MY_Controller::set_tenant_context(), MY_Model CRUD methods, migrations 070/071 (renumbered from 061/062 post-v1.6.0 rebase)
 
 ## Architecture
 
@@ -171,9 +171,9 @@ login flow (users_model->find, roles_model->find) are also properly scoped.
 - **firebase/php-jwt** — JWT encoding/decoding, HS256 signature verification, claim extraction
 - **CodeIgniter 3** — CI_Model base class (extended by EA_Model), pre_controller hook system, CI_Migration base
 
-## Multi-Tenant Tables (10)
+## Multi-Tenant Tables (11)
 
-All tables include `tenant_id VARCHAR(36) NOT NULL` and `tenant_branch_id VARCHAR(36) NULL` added in migration 061.
+All tables include `tenant_id VARCHAR(36) NOT NULL` and `tenant_branch_id VARCHAR(36) NULL` added in migration 070 (renumbered from 061 post-v1.6.0 rebase).
 
 1. **ea_appointments** — bookings for services; scoped by tenant_id
 2. **ea_services** — service definitions (haircut, consultation, etc.); scoped by tenant_id
@@ -184,11 +184,14 @@ All tables include `tenant_id VARCHAR(36) NOT NULL` and `tenant_branch_id VARCHA
 7. **ea_secretaries_providers** — assignment of secretaries to providers; scoped by tenant_id
 8. **ea_blocked_periods** — provider unavailability; scoped by tenant_id
 9. **ea_webhooks** — webhook registrations for tenant events; scoped by tenant_id
-10. **ea_polaris_tenants** — shadow table (migration 062): {tenant_id, slug, status, synced_at}
+10. **ea_working_plan_exceptions** — provider working-plan exceptions (new in upstream v1.6.0, migration 065); tenant-scoped via migration 070; no `id` column (uses start_date/id_users_provider as PK)
+11. **ea_polaris_tenants** — shadow table (migration 071, renumbered from 062): {tenant_id, slug, status, synced_at}
 
-## Composite Indexes (Migration 061)
+## Composite Indexes (Migration 070)
 
-All 10 multi-tenant tables get a composite index on `(tenant_id, id)` to make the common query pattern `WHERE tenant_id = ? AND id = ?` efficient. This is critical because MY_Model::find() hits this index on every appointment/service/user lookup.
+All 11 multi-tenant tables get a composite index on `(tenant_id, id)` (where `id` exists) to make the common query pattern `WHERE tenant_id = ? AND id = ?` efficient. This is critical because MY_Model::find() hits this index on every appointment/service/user lookup.
+
+**Special case — id-less tables:** `ea_user_settings`, `ea_secretaries_providers`, and `ea_working_plan_exceptions` have no `id` column. Migration 070 guards index creation via `information_schema` queries (MySQL 8.0 rejects `ADD INDEX IF NOT EXISTS` syntax) and skips the `AFTER id` clause for these tables.
 
 Additionally, `ea_users` gets a UNIQUE constraint on `(tenant_id, email)` so no two users within the same tenant can share an email (cross-tenant email reuse is allowed).
 

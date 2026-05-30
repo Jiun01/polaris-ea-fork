@@ -5,7 +5,7 @@
 #   ./docker/build.sh [--push] [--tag <version>]
 #
 # Defaults:
-#   --tag  polaris/v1.5.2-r1  (reads from git tag if available)
+#   --tag  polaris/v1.6.0-r1  (reads from git tag if available)
 #   --push false              (pass --push to actually push)
 #
 # Requires:
@@ -24,7 +24,7 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 IMAGE="ghcr.io/jiun01/polaris-ea"
-VERSION="${TAG:-$(git describe --tags --match 'polaris/v*' --abbrev=0 2>/dev/null || echo 'polaris/v1.5.2-r1')}"
+VERSION="${TAG:-$(git describe --tags --match 'polaris/v*' --abbrev=0 2>/dev/null || echo 'polaris/v1.6.0-r1')}"
 # Strip the polaris/ prefix for the Docker tag.
 DOCKER_TAG="${VERSION#polaris/}"
 PUSH=false

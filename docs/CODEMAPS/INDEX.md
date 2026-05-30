@@ -1,12 +1,12 @@
 # Polaris EA Fork — Codemaps
 
-**Last Updated:** 2026-05-26
+**Last Updated:** 2026-05-30
 
 This directory contains architectural documentation for the Polaris-specific components in the Easy!Appointments fork. All codemaps are generated from the actual codebase and describe the structure as-is.
 
 ## Overview
 
-The Polaris EA fork extends Easy!Appointments v1.5.2 with multi-tenant support, Bearer-token authentication, slug-routed public booking, and bot/consent protections. The fork runs as a containerized SaaS service (`ghcr.io/jiun01/polaris-ea:v1.5.2-r1`).
+The Polaris EA fork extends Easy!Appointments v1.6.0 (security release, rebased 2026-05-30) with multi-tenant support, Bearer-token authentication, slug-routed public booking, and bot/consent protections. The fork runs as a containerized SaaS service (`ghcr.io/jiun01/polaris-ea:v1.6.0-r1`).
 
 ## Codemaps
 
@@ -21,25 +21,26 @@ The Polaris EA fork extends Easy!Appointments v1.5.2 with multi-tenant support, 
 
 ## Key Statistics
 
-- **Multi-tenant tables:** 10 (appointments, services, users, settings, webhooks, etc.)
+- **Upstream baseline:** Easy!Appointments v1.6.0 (71 total migrations; Polaris adds 070/071)
+- **Multi-tenant tables:** 11 (appointments, services, users, settings, webhooks, working_plan_exceptions, etc.)
 - **Core tenant-enforcing classes:** 2 (MY_Model, MY_Controller)
-- **Migrations:** 2 (061: tenant_id columns + indexes; 062: ea_polaris_tenants shadow table)
+- **Polaris migrations:** 2 (070: tenant_id columns + indexes, guards index creation via information_schema; 071: ea_polaris_tenants shadow table)
 - **Tenant context paths:** 3 (Bearer JWT via BearerAuthHook; slug via Booking::slug(); session via EA_Controller::__construct())
 - **Public booking routes:** 1 (/book/{slug} → Booking::slug())
-- **E2E test specs:** 5 (auth, api isolation, public booking hardening, slug-routed booking, brand sweep)
-- **Docker stages:** 3 (Node assets, PHP vendor, production FPM)
+- **E2E test specs:** 5 (auth_bearer, api_isolation, booking_hardening, booking_sweep, brand_sweep) — 57 passed/5 skipped
+- **Docker stages:** 3 (Node:18 assets, PHP:8.4 vendor, PHP:8.4-FPM production)
 
 ## Integration Checklist
 
-The integration work (polaris/v1.5.2-r1) completed the following tasks:
+The integration work (now polaris/v1.6.0-r1, rebased onto upstream 1.6.0) maintains the following:
 
-- **S3-3:** Migration 061/062 — tenant_id columns + ea_polaris_tenants shadow table
-- **S3-4:** MY_Model — auto-scoping CRUD base class
-- **S3-5:** BearerAuthHook + MY_Controller — JWT auth + static context holder
-- **S3-6:** Polaris_tenant_model — slug → tenant_id resolver
-- **S3-7:** Booking controller hardening — PDPA opt-in, Cloudflare Turnstile, IP rate limit
-- **S3-8:** Multi-stage Dockerfile — Node + PHP vendor + FPM runtime
-- **S3-9:** Playwright E2E suite — 5 comprehensive test specs
+- **S3-3:** Migration 070/071 — tenant_id columns + ea_polaris_tenants shadow table (renumbered from 061/062 post-v1.6.0 rebase)
+- **S3-4:** MY_Model — auto-scoping CRUD base class (extends EA_Model, unchanged)
+- **S3-5:** BearerAuthHook + MY_Controller — JWT auth + static context holder (unchanged)
+- **S3-6:** Polaris_tenant_model — slug → tenant_id resolver (unchanged)
+- **S3-7:** Booking controller hardening — PDPA opt-in, Cloudflare Turnstile (default '0'), IP rate limit (guards rate_limit() outside CSRF)
+- **S3-8:** Multi-stage Dockerfile — Node:18 assets + PHP:8.4 vendor + PHP:8.4-FPM runtime
+- **S3-9:** Playwright E2E suite — 5 specs verified green vs v1.6.0-r1 image
 - **S3-10:** docker/build.sh — GHCR push script with .env auto-load
 
 ## Related Documentation
@@ -62,8 +63,8 @@ The integration work (polaris/v1.5.2-r1) completed the following tasks:
 ### For Operators
 
 - Environment variables: see **application/config/polaris.php** + the ENV reference at the end of this INDEX
-- Production image: `ghcr.io/jiun01/polaris-ea:v1.5.2-r1`
-- Multi-stage Dockerfile: `./Dockerfile` (asset compilation → vendor install → FPM runtime)
+- Production image: `ghcr.io/jiun01/polaris-ea:v1.6.0-r1` (Easy!Appointments v1.6.0 baseline + Polaris patches)
+- Multi-stage Dockerfile: `./Dockerfile` (Node:18 asset compilation → PHP:8.4 vendor install → PHP:8.4-FPM runtime)
 
 ---
 
@@ -139,5 +140,5 @@ docker run \
   -e POLARIS_TURNSTILE_SECRET="$TURNSTILE_SECRET" \
   -e POLARIS_CORS_ORIGIN="https://getpolaris.my" \
   -e POLARIS_WEBHOOK_SECRET="$WEBHOOK_SECRET" \
-  ghcr.io/jiun01/polaris-ea:v1.5.2-r1
+  ghcr.io/jiun01/polaris-ea:v1.6.0-r1
 ```

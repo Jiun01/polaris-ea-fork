@@ -1,8 +1,8 @@
 # Authentication Codemap
 
-<!-- Generated: 2026-05-26 | Files scanned: 8 | Token estimate: ~900 -->
+<!-- Generated: 2026-05-30 | Files scanned: 8 | Token estimate: ~900 -->
 
-**Last Updated:** 2026-05-26
+**Last Updated:** 2026-05-30
 **Entry Points:** BearerAuthHook::validate(), MY_Controller::from_bearer(), EA_Controller::__construct() (session path)
 
 ## Architecture
