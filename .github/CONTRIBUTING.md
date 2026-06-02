@@ -53,6 +53,9 @@ docker compose exec php bash -c "php index.php migrate"
 # Watch assets (auto-recompile on .scss/.js changes)
 npm run start
 
+# One-off asset rebuild (SCSS->CSS + JS minify) after editing assets/**/*.{scss,js}
+npx gulp compile        # or: npx gulp styles / npx gulp scripts
+
 # View application logs
 docker compose logs -f php
 
@@ -69,6 +72,15 @@ docker compose down
 # Remove everything (fresh start)
 docker compose down -v
 ```
+
+> **Asset gotcha (bit us twice):** `assets/**/*.min.{js,css}` are **gitignored
+> build artifacts** — editing a `.scss`/`.js` source does nothing until you
+> rebuild (`npx gulp compile`; the Docker image runs this at build time, but
+> local dev bind-mounts the host tree over the image's compiled assets). And the
+> cache-buster `application/config/app.php → cache_busting_token` is **static**:
+> **bump it (e.g. `TSJ85`→`TSJ86`) whenever you rebuild assets**, or returning
+> browsers keep serving the cached stale files (the `?TSJxx` query is the only
+> thing that changes the asset URL).
 
 ## E2E Testing
 

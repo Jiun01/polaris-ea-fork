@@ -1,8 +1,8 @@
 # Multi-Tenancy Codemap
 
-<!-- Generated: 2026-05-30 | Files scanned: 18 | Token estimate: ~1100 -->
+<!-- Generated: 2026-06-02 | Files scanned: 18 | Token estimate: ~1250 -->
 
-**Last Updated:** 2026-05-30
+**Last Updated:** 2026-06-02
 **Entry Points:** MY_Controller::set_tenant_context(), MY_Model CRUD methods, migrations 070/071 (renumbered from 061/062 post-v1.6.0 rebase)
 
 ## Architecture
@@ -40,7 +40,7 @@ Three paths set the tenant context — all converge at `MY_Controller::set_tenan
 | **EA_Controller** | Base for all EA controllers; extends MY_Controller | Calls resolve_session_tenant() at constructor start (before any model access) |
 | **MY_Model** | Auto-scoping CRUD base | assert_tenant(), apply_tenant_where(), inject_tenant_id(), find(), get_where(), delete() |
 | **TenantContextMissingException** | Thrown when context unset | Thrown by MY_Model; prevents cross-tenant queries |
-| **Polaris_tenant_model** | Slug → tenant_id lookup | resolve_slug(slug) → UUID or null; queries ea_polaris_tenants; checks status='active' |
+| **Polaris_tenant_model** | Slug ↔ tenant_id lookup | resolve_slug(slug) → UUID or null; resolve_tenant_slug(uuid) → slug (reverse, for admin footer + booking page self-binding); both query ea_polaris_tenants, status='active' |
 | **Migration 061** | tenant_id columns on 10 tables | NOT NULL UUID, composite index (tenant_id, id), UNIQUE(tenant_id, email) on users |
 | **Migration 062** | ea_polaris_tenants shadow table | {tenant_id, slug, status ENUM, synced_at}; populated by webhook |
 
@@ -204,6 +204,14 @@ Additionally, `ea_users` gets a UNIQUE constraint on `(tenant_id, email)` so no 
 5. **Shadow Table Validation** — Polaris_tenant_model checks status = 'active' when resolving slugs; suspended tenants cannot be booked into.
 6. **PHP-FPM State Reset** — BearerAuthHook::clear_tenant_context() on every request prevents stale tenant leakage when PHP-FPM reuses worker processes.
 7. **Pre-login Guard** — setting_helper returns default value when no tenant is set, so Login/Installation pages load without throwing.
+
+## Scoping Caveats (verified 2026-06-02 isolation audit)
+
+Auto-scoping is enforced **only by MY_Model**. `EA_DB_query_builder` is empty — there is **no global DB-level tenant filter**. Two consequences to remember:
+
+1. **Raw `$this->db` queries are NOT scoped.** Any controller/model that builds a query with `$this->db->from('<tenant table>')` instead of a MY_Model method bypasses isolation and reads every tenant's rows. Audit found exactly one such site — `Calendar::get_calendar_appointments()` "all" view (two raw appointment queries) — fixed (commit `5fd8383c`) by adding the same `if (!global_admin_mode) where('tenant_id', …)` guard. **Reviewer rule:** grep `\$this->db->from\(` in controllers; a raw query on a tenant table is a leak. (The find/update/destroy IDOR paths are safe — model `find()`/`save()`/`delete()` re-apply the tenant WHERE.)
+
+2. **Public booking context is per-page, not just per-session.** `Booking::slug()` stores `booking_tenant_id` in a single CI session key, so two *different* tenants' booking pages open in one browser clobber each other (a submit could run against the wrong tenant → "customer/provider ID does not exist"). Fixed (commit `f1a72d4a`): the booking page exposes its own `booking_slug` (script var), posts it with `register`/`get_available_hours`/`get_unavailable_dates`, and `Booking::apply_booking_slug_context()` re-resolves the tenant per-request via `from_slug()` (session fallback when absent). Accepting the slug per-request adds no new exposure — slugs are already public and `from_slug()` only resolves to a real `active` tenant.
 
 ## Related Codemaps
 

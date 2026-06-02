@@ -1,7 +1,12 @@
 # Public Booking Codemap
 
-**Last Updated:** 2026-05-20
+<!-- Generated: 2026-06-02 | Token estimate: ~1500 -->
+**Last Updated:** 2026-06-02
 **Entry Points:** Booking::slug($slug), GET /book/{slug}
+
+> **Note:** the public submission handler is `Booking::register()` (not
+> `save_appointment()`, which is the admin/calendar path). The diagram below
+> labels it `save_appointment()` for historical reasons; treat it as `register()`.
 
 ## Architecture
 
@@ -315,8 +320,43 @@ E2E tests confirm that:
 
 See **e2e_testing.md** for test specs.
 
+## Polaris booking UX + URL behavior (2026-06-02)
+
+**Clean URLs.** `config['index_page']=''` → routed URLs drop `/index.php/`
+(e.g. `/book/{slug}`). nginx `try_files` routes them; old `/index.php/*` URLs
+still resolve. `base_url`/`site_url` (and the JS `base_url` script var) are
+clean.
+
+**Per-request tenant binding (commit `f1a72d4a`).** `Booking::slug()` stores
+`booking_tenant_id` in one shared session key, so two different tenants'
+booking pages open in one browser clobber each other (a submit/reschedule
+then runs against the wrong tenant → "customer/provider ID does not exist").
+Fix: each page exposes its own `booking_slug` (script var), posts it with
+`registerAppointment` / `getAvailableHours` / `getUnavailableDates`, and
+`Booking::apply_booking_slug_context()` re-resolves the tenant per-request via
+`from_slug()` (session fallback when absent). See multi_tenancy.md §Scoping
+Caveats #2.
+
+**"Go to booking page" link targets (commit `64174093`).**
+- Admin backend footer (`components/backend_footer.php`) → the logged-in
+  tenant's own `/book/{slug}` (via `Polaris_tenant_model::resolve_tenant_slug`).
+- Booking confirmation/finish page (`pages/booking_confirmation.php`) → the
+  tenant's `company_link` (its website), falling back to `site_url()`.
+
+**Step wizard.** `pages/booking.js` renders a 4-step indicator. When a tenant
+has exactly **one service AND one provider**, step 1 (Service & Provider) is
+auto-selected, hidden, and the remaining boxes renumber to `1 2 3`. With ≥2
+services/providers all four steps show (`1 2 3 4`) and the customer picks.
+
+**Assets are a build gotcha.** `assets/**/*.min.{js,css}` are gitignored build
+artifacts from `gulp scripts`/`gulp styles` (`gulp compile` in the Docker
+image). The cache-buster `config/app.php → cache_busting_token` is **static** —
+**bump it whenever assets are rebuilt** or returning visitors keep cached
+stale files. Local dev bind-mounts the host tree over the image's compiled
+assets, so run `gulp compile` after pulling JS/CSS source changes.
+
 ## Related Codemaps
 
-- **multi_tenancy.md** — Tenant context setup via MY_Model
+- **multi_tenancy.md** — Tenant context setup via MY_Model; scoping caveats
 - **authentication.md** — Bearer token auth (API only, not used for public booking)
 - **e2e_testing.md** — Booking-related test scenarios
