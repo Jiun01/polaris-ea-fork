@@ -210,7 +210,17 @@ class Appointments_api_v1 extends EA_Controller
         try {
             $appointment = request();
 
-            $this->appointments_model->api_decode($appointment);
+            // Polaris booking-node contract: high-level shape with snake_case ids
+            // (service_id/provider_id), a nested customer object (find-or-create),
+            // and ISO-8601 datetimes. The normalizer emits EA's native DB-key
+            // array directly, so api_decode (which maps the camelCase api/v1 keys
+            // and would otherwise STRIP the DB keys) must be skipped for it.
+            // Native api/v1 payloads still go through api_decode as before.
+            if ($this->polaris_is_payload($appointment)) {
+                $appointment = $this->polaris_normalize_appointment($appointment);
+            } else {
+                $this->appointments_model->api_decode($appointment);
+            }
 
             if (array_key_exists('id', $appointment)) {
                 unset($appointment['id']);
@@ -274,6 +284,92 @@ class Appointments_api_v1 extends EA_Controller
         );
 
         $this->webhooks_client->trigger(WEBHOOK_APPOINTMENT_SAVE, $appointment);
+    }
+
+    /**
+     * Translate the Polaris booking-node payload into EA's native appointment
+     * array. Polaris sends { service_id, provider_id, customer: {...},
+     * start_datetime, end_datetime, notes } with ISO-8601 datetimes; EA's save
+     * path wants id_services / id_users_provider / id_users_customer +
+     * 'Y-m-d H:i:s'. The customer is found-or-created here. Payloads without the
+     * Polaris markers (native api/v1 clients) are returned unchanged.
+     *
+     * @param array $a Raw request body.
+     * @return array EA-native appointment array (or the original payload).
+     */
+    private function polaris_is_payload(array $a): bool
+    {
+        return array_key_exists('service_id', $a) ||
+            array_key_exists('provider_id', $a) ||
+            (array_key_exists('customer', $a) && is_array($a['customer']));
+    }
+
+    private function polaris_normalize_appointment(array $a): array
+    {
+        $out = [];
+
+        if (isset($a['service_id'])) {
+            $out['id_services'] = (int) $a['service_id'];
+        }
+
+        if (isset($a['provider_id'])) {
+            $out['id_users_provider'] = (int) $a['provider_id'];
+        }
+
+        if (!empty($a['start_datetime'])) {
+            $out['start_datetime'] = (new DateTime((string) $a['start_datetime']))->format('Y-m-d H:i:s');
+        }
+
+        if (!empty($a['end_datetime'])) {
+            $out['end_datetime'] = (new DateTime((string) $a['end_datetime']))->format('Y-m-d H:i:s');
+        }
+
+        if (isset($a['notes'])) {
+            $out['notes'] = (string) $a['notes'];
+        }
+
+        $out['id_users_customer'] = $this->polaris_resolve_customer((array) ($a['customer'] ?? []));
+
+        return $out;
+    }
+
+    /**
+     * Find-or-create an EA customer from the Polaris customer object and return
+     * its id. WhatsApp/IG customers have no email, so a stable synthetic email is
+     * derived from the phone (lets EA's required-email validation pass and dedups
+     * repeat bookings by the same contact).
+     *
+     * @param array $cust { first_name, last_name, email, phone }
+     * @return int Customer id.
+     */
+    private function polaris_resolve_customer(array $cust): int
+    {
+        $phone = trim((string) ($cust['phone'] ?? ($cust['phone_number'] ?? '')));
+        $email = trim((string) ($cust['email'] ?? ''));
+
+        if ($email === '') {
+            $digits = preg_replace('/[^0-9]/', '', $phone);
+            $email = ($digits !== '' ? $digits : 'unknown') . '@wa.polaris.local';
+        }
+
+        $record = [
+            'first_name' => (string) ($cust['first_name'] ?? 'Customer'),
+            'last_name' => (string) ($cust['last_name'] ?? ''),
+            'email' => $email,
+            'phone_number' => $phone,
+        ];
+
+        // Reuse an existing customer when one matches (EA matches on email).
+        try {
+            $existing = $this->customers_model->find_record_id($record);
+            if (!empty($existing)) {
+                return (int) $existing;
+            }
+        } catch (Throwable $e) {
+            // No match — fall through and create a new customer.
+        }
+
+        return (int) $this->customers_model->save($record);
     }
 
     /**

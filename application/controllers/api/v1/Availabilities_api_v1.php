@@ -57,11 +57,13 @@ class Availabilities_api_v1 extends EA_Controller
     public function get(): void
     {
         try {
-            $provider_id = request('providerId');
+            // Accept both EA-native camelCase (providerId/serviceId/date) and the
+            // Polaris client's snake_case (provider_id/service_id/date_from).
+            $provider_id = request('providerId') ?? request('provider_id');
 
-            $service_id = request('serviceId');
+            $service_id = request('serviceId') ?? request('service_id');
 
-            $date = request('date');
+            $date = request('date') ?? request('date_from');
 
             if (!$date) {
                 $date = date('Y-m-d');
