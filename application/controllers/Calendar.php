@@ -802,6 +802,13 @@ class Calendar extends EA_Controller
             $this->db->select('*');
             $this->db->from('appointments');
 
+            // Polaris: tenant-scope this raw query. The "all" view bypasses
+            // MY_Model, so apply the same tenant filter the models use —
+            // otherwise the calendar leaks every tenant's appointments.
+            if (!MY_Controller::$global_admin_mode) {
+                $this->db->where('tenant_id', MY_Controller::$tenant_id);
+            }
+
             if (!$is_all) {
                 $this->db->where($where_id, $record_id);
             }
@@ -840,6 +847,11 @@ class Calendar extends EA_Controller
                 // Build query using CodeIgniter's query builder for SQL injection protection
                 $this->db->select('*');
                 $this->db->from('appointments');
+
+                // Polaris: tenant-scope this raw query (see note above).
+                if (!MY_Controller::$global_admin_mode) {
+                    $this->db->where('tenant_id', MY_Controller::$tenant_id);
+                }
 
                 if (!$is_all) {
                     $this->db->where($where_id, $record_id);
