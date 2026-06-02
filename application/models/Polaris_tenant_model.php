@@ -33,4 +33,32 @@ class Polaris_tenant_model extends EA_Model
 
         return $row['tenant_id'] ?? null;
     }
+
+    /**
+     * Resolve a tenant_id UUID back to its active booking slug.
+     *
+     * Used by the admin backend footer to build the "Go to booking page"
+     * link for the logged-in tenant. Returns null when the tenant has no
+     * active slug row.
+     *
+     * @param string|null $tenant_id Current tenant UUID (MY_Controller::$tenant_id).
+     * @return string|null Slug or null.
+     */
+    public function resolve_tenant_slug(?string $tenant_id): ?string
+    {
+        if (empty($tenant_id)) {
+            return null;
+        }
+
+        $row = $this->db
+            ->select('slug')
+            ->from('ea_polaris_tenants')
+            ->where('tenant_id', $tenant_id)
+            ->where('status', 'active')
+            ->limit(1)
+            ->get()
+            ->row_array();
+
+        return $row['slug'] ?? null;
+    }
 }

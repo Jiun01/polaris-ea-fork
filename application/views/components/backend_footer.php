@@ -29,8 +29,13 @@
     </div>
 
     <div class="mb-3 me-lg-5 mb-lg-0">
-        <?php $company_link = setting('company_link'); ?>
-        <a href="<?= !empty($company_link) ? e($company_link) : site_url('appointments') ?>"<?= !empty($company_link) ? ' target="_blank" rel="noopener"' : '' ?>>
+        <?php
+            // Link to the logged-in tenant's own public booking page (/book/{slug}).
+            $CI = &get_instance();
+            $CI->load->model('polaris_tenant_model');
+            $booking_slug = $CI->polaris_tenant_model->resolve_tenant_slug(MY_Controller::$tenant_id);
+        ?>
+        <a href="<?= $booking_slug ? site_url('book/' . $booking_slug) : site_url('appointments') ?>" target="_blank" rel="noopener">
             <?= lang('go_to_booking_page') ?>
         </a>
     </div>
