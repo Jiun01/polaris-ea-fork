@@ -29,7 +29,8 @@
     </div>
 
     <div class="mb-3 me-lg-5 mb-lg-0">
-        <a href="<?= site_url('appointments') ?>">
+        <?php $company_link = setting('company_link'); ?>
+        <a href="<?= !empty($company_link) ? e($company_link) : site_url('appointments') ?>"<?= !empty($company_link) ? ' target="_blank" rel="noopener"' : '' ?>>
             <?= lang('go_to_booking_page') ?>
         </a>
     </div>
