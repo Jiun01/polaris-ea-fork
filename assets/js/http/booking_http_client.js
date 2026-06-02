@@ -67,6 +67,7 @@ App.Http.Booking = (function () {
 
         const data = {
             csrf_token: vars('csrf_token'),
+            booking_slug: vars('booking_slug'), // Polaris: bind request to this page's tenant
             service_id: $selectService.val(),
             provider_id: $selectProvider.val(),
             selected_date: selectedDate,
@@ -182,6 +183,7 @@ App.Http.Booking = (function () {
 
         const data = {
             csrf_token: vars('csrf_token'),
+            booking_slug: vars('booking_slug'), // Polaris: bind submit to this page's tenant
             post_data: formData,
         };
 
@@ -288,6 +290,7 @@ App.Http.Booking = (function () {
             service_id: serviceId,
             selected_date: encodeURIComponent(selectedDateString),
             csrf_token: vars('csrf_token'),
+            booking_slug: vars('booking_slug'), // Polaris: bind request to this page's tenant
             manage_mode: Number(App.Pages.Booking.manageMode),
             appointment_id: appointmentId,
         };

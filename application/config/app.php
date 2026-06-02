@@ -15,4 +15,4 @@ $config['url'] = Config::BASE_URL;
 
 $config['debug'] = Config::DEBUG_MODE;
 
-$config['cache_busting_token'] = 'TSJ84'; // bump whenever assets/*.min.* are rebuilt
+$config['cache_busting_token'] = 'TSJ85'; // bump whenever assets/*.min.* are rebuilt

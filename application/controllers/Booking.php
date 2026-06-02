@@ -73,6 +73,7 @@ class Booking extends EA_Controller
         $this->load->model('customers_model');
         $this->load->model('settings_model');
         $this->load->model('consents_model');
+        $this->load->model('polaris_tenant_model');
 
         $this->load->library('timezones');
         $this->load->library('synchronization');
@@ -80,6 +81,24 @@ class Booking extends EA_Controller
         $this->load->library('availability');
         $this->load->library('webhooks_client');
         $this->load->library('jitsi_client');
+    }
+
+    /**
+     * Polaris: re-establish the tenant context from the booking page's own slug.
+     *
+     * The booking page posts its slug (script var `booking_slug`) with the submit
+     * and availability requests. Re-resolving the tenant per-request keeps each
+     * booking tab self-contained, so two different tenants' booking pages open in
+     * the same browser cannot clobber each other's shared-session tenant context.
+     * No-op when no (valid) slug is posted — falls back to the session-based path.
+     */
+    private function apply_booking_slug_context(): void
+    {
+        $slug = request('booking_slug');
+
+        if (!empty($slug) && preg_match('/^[a-z][a-z0-9-]{0,98}$/', $slug)) {
+            MY_Controller::from_slug($slug);
+        }
     }
 
     /**
@@ -343,6 +362,11 @@ class Booking extends EA_Controller
             'customer_token' => $customer_token,
             'default_language' => setting('default_language'),
             'default_timezone' => setting('default_timezone'),
+            // Polaris: the page's own tenant slug. Posted back with the booking
+            // submit + availability AJAX so each request re-resolves its tenant
+            // independently of the shared session (lets different tenants' booking
+            // pages coexist in one browser without clobbering each other).
+            'booking_slug' => $this->polaris_tenant_model->resolve_tenant_slug(MY_Controller::$tenant_id),
         ]);
 
         $polaris_turnstile_sitekey = (string) $this->config->item('polaris_turnstile_sitekey');
@@ -406,6 +430,10 @@ class Booking extends EA_Controller
     {
         try {
             method('post'); // upstream 1.6.0: per-request method allow-listing (#1754)
+
+            // Polaris: bind this submit to the booking page's own tenant (not the
+            // shared session) so it can't be clobbered by another tenant's tab.
+            $this->apply_booking_slug_context();
 
             // Polaris: IP rate limit — 10 booking *submissions* per IP per hour.
             // Runs as the OUTERMOST gate (before CSRF) so a flood of POSTs from a
@@ -763,6 +791,8 @@ class Booking extends EA_Controller
         try {
             method('post');
 
+            $this->apply_booking_slug_context(); // Polaris: bind to the page's tenant
+
             $disable_booking = setting('disable_booking');
 
             if ($disable_booking) {
@@ -852,6 +882,8 @@ class Booking extends EA_Controller
     {
         try {
             method('get');
+
+            $this->apply_booking_slug_context(); // Polaris: bind to the page's tenant
 
             $disable_booking = setting('disable_booking');
 
