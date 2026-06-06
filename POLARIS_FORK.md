@@ -26,10 +26,10 @@ Tagging convention: `polaris/v{ea_version}-r{rev}` — current `polaris/v1.6.0-r
 ## Production image
 
 ```
-ghcr.io/jiun01/polaris-ea:v1.6.0-r2
+ghcr.io/jiun01/polaris-ea:v1.6.0-r3
 ```
 
-Build and push: `bash docker/build.sh --tag v1.6.0-r2 --push`
+Build and push: `bash docker/build.sh --tag v1.6.0-r3 --push`
 
 **Self-configuring (r2+):** the image ships no `config.php`. A baked entrypoint
 (`docker/php-fpm/docker-entrypoint.sh`) writes `config.php` from env on boot, waits
@@ -40,7 +40,9 @@ migrate on boot). JWT secret (`POLARIS_EA_JWT_SECRET`), Turnstile keys, CORS ori
 and webhook secret are read from env too — see `application/config/polaris.php`.
 
 > History: `v1.6.0-r1` = the 1.5.2→1.6.0 rebase; `v1.6.0-r2` adds the self-configuring
-> entrypoint (no functional app change).
+> entrypoint (no functional app change); `v1.6.0-r3` makes `Appointments_api_v1::store()`
+> accept the Polaris booking-node contract (skips `api_decode` for Polaris payloads;
+> snake_case `service_id`/`provider_id` + nested `customer{}` find-or-create).
 
 ## Documentation
 
