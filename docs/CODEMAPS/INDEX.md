@@ -1,12 +1,12 @@
 # Polaris EA Fork — Codemaps
 
-**Last Updated:** 2026-05-30
+**Last Updated:** 2026-06-09
 
 This directory contains architectural documentation for the Polaris-specific components in the Easy!Appointments fork. All codemaps are generated from the actual codebase and describe the structure as-is.
 
 ## Overview
 
-The Polaris EA fork extends Easy!Appointments v1.6.0 (security release, rebased 2026-05-30) with multi-tenant support, Bearer-token authentication, slug-routed public booking, and bot/consent protections. The fork runs as a containerized SaaS service (`ghcr.io/jiun01/polaris-ea:v1.6.0-r2`).
+The Polaris EA fork extends Easy!Appointments v1.6.0 (security release, rebased 2026-05-30) with multi-tenant support, Bearer-token authentication, slug-routed public booking, and bot/consent protections. The fork runs as a containerized SaaS service (current `ghcr.io/jiun01/polaris-ea:v1.6.0-r4`; prod compose pins the moving tag `v1.6.0-prod`). The root URL `/` 302-redirects to the staff `/login` (S3-5; was the marketing site before `r4` / 2026-06-09).
 
 ## Codemaps
 
@@ -41,7 +41,7 @@ The integration work (now polaris/v1.6.0-r2, rebased onto upstream 1.6.0) mainta
 - **S3-7:** Booking controller hardening — PDPA opt-in, Cloudflare Turnstile (default '0'), IP rate limit (guards rate_limit() outside CSRF)
 - **S3-8:** Multi-stage Dockerfile — Node:18 assets + PHP:8.4 vendor + PHP:8.4-FPM runtime
 - **S3-9:** Playwright E2E suite — 5 specs verified green vs v1.6.0-r2 image
-- **S3-10:** docker/build.sh — GHCR push script with .env auto-load
+- **S3-10:** docker/build.sh — GHCR push script; reads `GITHUB_TOKEN` (write:packages) from the monorepo `../polaris/.env` (single-var extraction, never sources the file)
 
 ## Related Documentation
 
@@ -58,12 +58,12 @@ The integration work (now polaris/v1.6.0-r2, rebased onto upstream 1.6.0) mainta
 
 - Setting up a local dev environment: see **.github/CONTRIBUTING.md** → "Dev Setup"
 - Running E2E tests: `npm run e2e` (or `npm run e2e:report` to view HTML)
-- Building the production image: `bash docker/build.sh --push` (requires GITHUB_TOKEN)
+- Building the production image: `bash docker/build.sh --push` (GITHUB_TOKEN read from ../polaris/.env)
 
 ### For Operators
 
 - Environment variables: see **application/config/polaris.php** + the ENV reference at the end of this INDEX
-- Production image: `ghcr.io/jiun01/polaris-ea:v1.6.0-r2` (Easy!Appointments v1.6.0 baseline + Polaris patches)
+- Production image: `ghcr.io/jiun01/polaris-ea:v1.6.0-r4` (Easy!Appointments v1.6.0 baseline + Polaris patches; prod pins moving tag `v1.6.0-prod`)
 - Multi-stage Dockerfile: `./Dockerfile` (Node:18 asset compilation → PHP:8.4 vendor install → PHP:8.4-FPM runtime)
 
 ---

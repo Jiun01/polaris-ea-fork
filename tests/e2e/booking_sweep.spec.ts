@@ -53,11 +53,11 @@ test.describe('§6 E2E Acceptance Sweep', () => {
     });
 
     // §6.4 — Root URL redirect (checked at HTTP level, no browser follow)
-    test('§6.4 GET / returns 302 redirect to getpolaris.my', async () => {
+    test('§6.4 GET / returns 302 redirect to staff login', async () => {
         const ctx = await pwRequest.newContext();
         const res = await ctx.get('/', { maxRedirects: 0 });
         expect(res.status()).toBe(302);
-        expect(res.headers()['location'] ?? '').toContain('getpolaris.my');
+        expect(res.headers()['location'] ?? '').toContain('/login');
         await ctx.dispose();
     });
 

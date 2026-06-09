@@ -8,19 +8,32 @@
 #   --tag  polaris/v1.6.0-r2  (reads from git tag if available)
 #   --push false              (pass --push to actually push)
 #
-# Requires:
-#   docker buildx, logged in to ghcr.io as jiun01:
-#     echo $GITHUB_TOKEN | docker login ghcr.io -u jiun01 --password-stdin
+# Requires (for --push only):
+#   docker buildx, and a GHCR write:packages token. The token is read from the
+#   monorepo secrets file polaris/.env (single source of truth) — see below.
+#   Or `docker login ghcr.io -u jiun01` manually and skip the token entirely.
 
 set -euo pipefail
 
-# Load .env from repo root if present (picks up GITHUB_TOKEN etc).
-ENV_FILE="$(git rev-parse --show-toplevel 2>/dev/null)/.env"
-if [[ -f "$ENV_FILE" ]]; then
-    set -a
-    # shellcheck source=/dev/null
-    source "$ENV_FILE"
-    set +a
+# GHCR push token — read securely from the monorepo secrets file polaris/.env
+# (sibling of this fork), NOT from this fork's own .env. We extract ONLY the
+# GITHUB_TOKEN line; the file is never `source`d, so polaris/.env's other secrets
+# (POLARIS_KMS_KEY, DB URLs, API keys) never enter this build's environment.
+# Precedence: an already-exported GITHUB_TOKEN wins; POLARIS_ENV_FILE overrides
+# the path. The value is piped to `docker login --password-stdin` — never echoed.
+if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+    _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    POLARIS_ENV_FILE="${POLARIS_ENV_FILE:-${_script_dir}/../../polaris/.env}"
+    if [[ -f "$POLARIS_ENV_FILE" ]]; then
+        _tok="$(sed -n 's/^[[:space:]]*GITHUB_TOKEN[[:space:]]*=//p' "$POLARIS_ENV_FILE" | tail -n1 | tr -d '\r')"
+        _tok="${_tok#"${_tok%%[![:space:]]*}"}"   # ltrim whitespace
+        _tok="${_tok%"${_tok##*[![:space:]]}"}"   # rtrim whitespace
+        _tok="${_tok%\"}"; _tok="${_tok#\"}"       # strip paired double quotes
+        _tok="${_tok%\'}"; _tok="${_tok#\'}"       # strip paired single quotes
+        [[ -n "$_tok" ]] && export GITHUB_TOKEN="$_tok"
+        unset _tok
+    fi
+    unset _script_dir
 fi
 
 IMAGE="ghcr.io/jiun01/polaris-ea"
@@ -40,7 +53,9 @@ done
 
 if [[ "$PUSH" == "true" ]]; then
     if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-        echo "Error: GITHUB_TOKEN is not set. Add it to .env or export it." >&2
+        echo "Error: GITHUB_TOKEN is not set. Add a write:packages PAT to polaris/.env," >&2
+        echo "       export GITHUB_TOKEN, set POLARIS_ENV_FILE, or run" >&2
+        echo "       'docker login ghcr.io -u jiun01' manually and re-run." >&2
         exit 1
     fi
     echo "$GITHUB_TOKEN" | docker login ghcr.io -u jiun01 --password-stdin

@@ -1,7 +1,8 @@
 # Docker Build Codemap
 
-**Last Updated:** 2026-05-20
+**Last Updated:** 2026-06-09
 **Entry Points:** ./Dockerfile, docker/build.sh
+**Current image:** `ghcr.io/jiun01/polaris-ea:v1.6.0-r4` (prod compose pins moving tag `v1.6.0-prod`)
 
 ## Architecture
 
@@ -42,7 +43,7 @@
 │  COPY application/ system/ index.php ./                  │
 │  RUN chown -R www-data:www-data /var/www/html           │
 │  ↓                                                       │
-│  Final image: ghcr.io/jiun01/polaris-ea:v1.6.0-r2      │
+│  Final image: ghcr.io/jiun01/polaris-ea:v1.6.0-r4      │
 │  Size: ~600 MB (lean, no build tools)                    │
 │  Extensions: gd, pdo_mysql, curl, xml, mbstring,         │
 │             intl, exif, zip (runtime-only)               │
@@ -69,11 +70,14 @@
 
 ### Environment Variables
 
-Sourced from `.env` file in repo root:
+The GHCR push token is read from the **monorepo** secrets file `../polaris/.env`
+(single source of truth) — build.sh extracts only `GITHUB_TOKEN`, never sources the
+whole file. Override the path with `POLARIS_ENV_FILE`, export `GITHUB_TOKEN`, or just
+`docker login` manually.
 
 ```bash
-# .env (git-ignored)
-GITHUB_TOKEN=ghp_...       # GitHub token for GHCR push
+# ../polaris/.env (git-ignored)   ← NOT this fork's .env
+GITHUB_TOKEN=ghp_...       # write:packages PAT for GHCR push (build box only)
 ```
 
 ### Image Naming

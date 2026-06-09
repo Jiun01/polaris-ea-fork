@@ -145,7 +145,7 @@ See [docs/CODEMAPS/e2e_testing.md](../docs/CODEMAPS/e2e_testing.md) for test doc
 # Build multi-stage Docker image
 ./docker/build.sh
 
-# Build and push to GHCR (requires GITHUB_TOKEN in .env)
+# Build and push to GHCR (reads GITHUB_TOKEN from ../polaris/.env, or `docker login` first)
 ./docker/build.sh --push
 
 # Custom version tag

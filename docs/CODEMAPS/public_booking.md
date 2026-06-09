@@ -90,6 +90,10 @@
 ### Route Definition (`application/config/routes.php`)
 
 ```php
+// Root `/` has no default booking page → Home::index() 302-redirects to /login
+// (staff login; was the marketing site before 2026-06-09 / image v1.6.0-r4).
+$route['default_controller'] = 'home';
+
 // Polaris public booking path: /book/{slug} → Booking::slug($slug).
 // Pattern: lowercase letter + up to 98 alphanumeric/hyphen chars = valid slug.
 // MUST appear before any catch-all routes.
