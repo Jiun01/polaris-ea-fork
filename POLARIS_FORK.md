@@ -21,15 +21,15 @@ This repository is a **white-labelled fork of [Easy!Appointments](https://github
 | `polaris/integration` | `tenant_id` migration + `MY_Model` enforcement + Bearer-token / slug routing + PDPA/Turnstile + multi-stage Dockerfile + §6 E2E sweep. |
 | `polaris/v1.6.0-r1` | Rebase of the full patch-set onto upstream `1.6.0` (security release). Merged into main → tagged `polaris/v1.6.0-r1`. |
 
-Tagging convention: `polaris/v{ea_version}-r{rev}` — current `polaris/v1.6.0-r1` (first Polaris revision atop upstream `1.6.0`).
+Tagging convention: `polaris/v{ea_version}-r{rev}` — current `polaris/v1.6.0-r4`.
 
 ## Production image
 
 ```
-ghcr.io/jiun01/polaris-ea:v1.6.0-r3
+ghcr.io/jiun01/polaris-ea:v1.6.0-r4
 ```
 
-Build and push: `bash docker/build.sh --tag v1.6.0-r3 --push`
+Build and push: `bash docker/build.sh --tag v1.6.0-r4 --push`
 
 **Self-configuring (r2+):** the image ships no `config.php`. A baked entrypoint
 (`docker/php-fpm/docker-entrypoint.sh`) writes `config.php` from env on boot, waits
@@ -42,7 +42,10 @@ and webhook secret are read from env too — see `application/config/polaris.php
 > History: `v1.6.0-r1` = the 1.5.2→1.6.0 rebase; `v1.6.0-r2` adds the self-configuring
 > entrypoint (no functional app change); `v1.6.0-r3` makes `Appointments_api_v1::store()`
 > accept the Polaris booking-node contract (skips `api_decode` for Polaris payloads;
-> snake_case `service_id`/`provider_id` + nested `customer{}` find-or-create).
+> snake_case `service_id`/`provider_id` + nested `customer{}` find-or-create);
+> `v1.6.0-r4` changes the root URL `/` from a marketing-site redirect to a 302 to the
+> staff `/login` (by design, S3-5), and moves the GHCR push-token source to the
+> monorepo `../polaris/.env` (single-var extraction, never sources the file).
 
 ## Documentation
 

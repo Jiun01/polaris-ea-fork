@@ -62,10 +62,10 @@
 ./docker/build.sh --push
 
 # Custom tag
-./docker/build.sh --tag v1.6.0-r2
+./docker/build.sh --tag v1.6.0-r4
 
 # Push custom tag
-./docker/build.sh --tag v1.6.0-r2 --push
+./docker/build.sh --tag v1.6.0-r4 --push
 ```
 
 ### Environment Variables
@@ -87,9 +87,9 @@ ghcr.io/jiun01/polaris-ea:<VERSION>
 ```
 
 Version defaults to:
-1. Git tag matching `polaris/v*` (e.g., `git tag polaris/v1.6.0-r2`)
+1. Git tag matching `polaris/v*` (e.g., `git tag polaris/v1.6.0-r4`)
 2. Git describe output (strips `polaris/` prefix)
-3. Fallback: `v1.6.0-r2`
+3. Fallback: `v1.6.0-r4`
 
 ### Build Args
 
@@ -97,7 +97,7 @@ Version defaults to:
 docker buildx build \
   --platform linux/amd64 \
   --target production \
-  --tag ghcr.io/jiun01/polaris-ea:v1.6.0-r2 \
+  --tag ghcr.io/jiun01/polaris-ea:v1.6.0-r4 \
   --tag ghcr.io/jiun01/polaris-ea:latest \
   --file Dockerfile \
   [--push]                    # Optional: push to registry
@@ -298,13 +298,13 @@ docker run \
   -e POLARIS_TURNSTILE_SECRET="$SECRET" \
   -e POLARIS_CORS_ORIGIN="https://getpolaris.my" \
   -e POLARIS_WEBHOOK_SECRET="$WEBHOOK_SECRET" \
-  ghcr.io/jiun01/polaris-ea:v1.6.0-r2
+  ghcr.io/jiun01/polaris-ea:v1.6.0-r4
 ```
 
 To verify no secrets are in the image:
 
 ```bash
-docker inspect ghcr.io/jiun01/polaris-ea:v1.6.0-r2 | jq '.Config.Env'
+docker inspect ghcr.io/jiun01/polaris-ea:v1.6.0-r4 | jq '.Config.Env'
 # Should NOT contain actual secret values
 ```
 
@@ -316,7 +316,7 @@ The script uses Docker's layer caching. To force a clean build:
 docker buildx build \
   --platform linux/amd64 \
   --target production \
-  --tag ghcr.io/jiun01/polaris-ea:v1.6.0-r2 \
+  --tag ghcr.io/jiun01/polaris-ea:v1.6.0-r4 \
   --no-cache \
   .
 ```
@@ -342,7 +342,7 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u jiun01 --password-stdin
 docker buildx build \
   --platform linux/amd64 \
   --target production \
-  --tag ghcr.io/jiun01/polaris-ea:v1.6.0-r2 \
+  --tag ghcr.io/jiun01/polaris-ea:v1.6.0-r4 \
   --tag ghcr.io/jiun01/polaris-ea:latest \
   --push \
   .
@@ -352,10 +352,10 @@ docker buildx build \
 
 ```bash
 # Pull the image
-docker pull ghcr.io/jiun01/polaris-ea:v1.6.0-r2
+docker pull ghcr.io/jiun01/polaris-ea:v1.6.0-r4
 
 # Inspect layers
-docker inspect ghcr.io/jiun01/polaris-ea:v1.6.0-r2
+docker inspect ghcr.io/jiun01/polaris-ea:v1.6.0-r4
 ```
 
 ## Related Codemaps
