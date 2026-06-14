@@ -59,6 +59,14 @@ $route['default_controller'] = 'home';
 // MUST appear before any catch-all routes.
 $route['book/([a-z][a-z0-9-]{0,98})'] = 'booking/slug/$1';
 
+// Polaris: stable /admin alias for the staff back-office.
+// EA 1.6 has no `/admin` route — the old monolithic Backend controller was split
+// into Calendar/Login/Customers/… so a bare /admin 404s ("Page Not Found").
+// Map it to the Login controller: unauthenticated visitors see the staff login,
+// and Login::index() bounces an already-authenticated session to /calendar.
+// Keeps the historical https://calendar.getpolaris.my/admin link working.
+$route['admin'] = 'login';
+
 $route['404_override'] = '';
 
 $route['translate_uri_dashes'] = false;

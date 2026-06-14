@@ -1,4 +1,8 @@
-FROM php:8.5-fpm
+# Pinned to 8.4 — the version currently deployed as v1.6.0-prod (PHP API
+# 20240924). The lib-stripping regression below is fixed here without ALSO
+# jumping a PHP minor mid-incident; bump to 8.5 deliberately once EA is
+# verified against it.
+FROM php:8.4-fpm
 
 WORKDIR "/var/www/html"
 
@@ -22,8 +26,22 @@ RUN apt-get update \
     && echo "alias ll=\"ls -al\"" >> /root/.bashrc \
     && echo "export XDEBUG_TRIGGER=1" >> /root/.bashrc \
     && echo "export PHP_IDE_CONFIG=\"serverName=host.docker.internal\"" >> /root/.bashrc \
-    && apt-get -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# NOTE: `apt-get autoremove` was removed here intentionally. It stripped the
+# runtime libs `intl`/`gd` link against (libicu, libpng) — the exact cause of
+# the v1.6.0-prod 502 outage (EA hard-requires intl). docker-php-extension-
+# installer marks runtime libs as manually-installed, but autoremove on top of
+# the node/composer build deps was removing them anyway. The few MB saved is
+# not worth a recurring production outage.
+
+# Fail the build if any required PHP extension can't actually LOAD (not just is
+# compiled). A stripped runtime lib makes the extension silently absent from
+# `php -m`; asserting here turns that into a red build instead of a 502 in prod.
+RUN set -eux; \
+    for ext in intl gd mysqli pdo_mysql mbstring; do \
+        php -m | grep -qix "$ext" \
+            || { echo "FATAL: PHP extension '$ext' not loaded — missing runtime lib?"; exit 1; }; \
+    done
 
 CMD ["bash", "docker/php-fpm/start-container"]
