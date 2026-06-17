@@ -59,7 +59,11 @@ RUN apt-get update \
         intl \
         exif \
         bcmath \
-    && apt-get purge -y --auto-remove \
+    # Purge ONLY the -dev header packages. Do NOT use `--auto-remove`: it strips
+    # the runtime libs gd/intl link against (libpng16, libicu*), which silently
+    # disables those extensions and 502s EA (which hard-requires intl). Purging
+    # the named -dev packages alone leaves the runtime .so libraries in place.
+    && apt-get purge -y \
         libfreetype6-dev \
         libpng-dev \
         libjpeg-dev \
@@ -70,6 +74,15 @@ RUN apt-get update \
         libicu-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Fail the build if any required PHP extension can't actually LOAD (not just is
+# compiled). A stripped runtime lib makes the extension silently absent from
+# `php -m`; asserting here turns that into a red build instead of a 502 in prod.
+RUN set -eux; \
+    for ext in intl gd mysqli pdo_mysql mbstring bcmath; do \
+        php -m | grep -qix "$ext" \
+            || { echo "FATAL: PHP extension '$ext' not loaded — missing runtime lib?"; exit 1; }; \
+    done
 
 WORKDIR /var/www/html
 
