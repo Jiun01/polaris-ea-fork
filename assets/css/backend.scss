@@ -626,3 +626,50 @@ body .modal.full-screen .modal-push {
         min-width: 0;
     }
 }
+
+/* ============================================================
+   Redesign polish — calendar admin (backend). Token-consistent with
+   the booking surface (--ea-* from _tokens.scss via general.css).
+   Conservative first pass: radius / elevation / controls only (no
+   colour changes while working blind). CSS-only; DOM + JS untouched.
+   ============================================================ */
+
+/* Buttons — token radius (matches booking). */
+.backend-page .btn,
+#calendar-toolbar .btn,
+.modal .btn {
+    border-radius: var(--ea-radius-lg, 8px);
+}
+
+/* Form controls — token radius. */
+.backend-page .form-control,
+.backend-page .form-select,
+.modal .form-control,
+.modal .form-select {
+    border-radius: var(--ea-radius-lg, 8px);
+}
+
+/* Form labels — match booking weight/colour. */
+.backend-page .form-label,
+.modal .form-label {
+    font-weight: 500;
+    color: var(--ea-text-subtle, #5a6070);
+}
+
+/* Cards — token radius. */
+.backend-page .card {
+    border-radius: var(--ea-radius-lg, 8px);
+}
+
+/* Modals — token radius + soft elevation (header keeps tenant colour). */
+.modal-content {
+    border-radius: var(--ea-radius-2xl, 16px) !important;
+    overflow: hidden;
+    box-shadow: var(--ea-shadow-elevation-low) !important;
+}
+
+/* Calendar event chips — rounded. */
+#calendar .fc-event,
+#calendar .calendar-view .event {
+    border-radius: var(--ea-radius-md, 6px) !important;
+}

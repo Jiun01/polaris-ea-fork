@@ -1,0 +1,52 @@
+/* ----------------------------------------------------------------------------
+ * Polaris EA design tokens (--ea-*) — neutral palette, radii, elevation, motion.
+ * AA-corrected per the redesign plan's contrast table. These are CSS custom
+ * properties only; DEFINING them is inert until a rule references them, so this
+ * partial is safe to ship ahead of the visual restyle.
+ *
+ * NOTE: fonts are intentionally NOT defined here — the Polaris brand font
+ * (Bricolage Grotesque) is already vendored + applied site-wide in general.scss.
+ * ---------------------------------------------------------------------------- */
+:root {
+    /* Surfaces */
+    --ea-bg: #ffffff;
+    --ea-bg-muted: hsl(210, 20%, 97%);
+    --ea-bg-subtle: hsl(220, 14%, 94%);
+
+    /* Text — AA-corrected (see plan contrast table) */
+    --ea-text-emphasis: hsl(210, 30%, 4%);   /* headings / strong */
+    --ea-text: hsl(220, 6%, 25%);            /* body */
+    --ea-text-subtle: hsl(220, 9%, 38%);     /* darkened from 46% → AA on muted bg */
+    --ea-text-muted: hsl(218, 11%, 65%);     /* decorative / disabled ONLY */
+    --ea-placeholder: #7d8494;               /* 4.5:1 on white */
+
+    /* Borders */
+    --ea-border-subtle: hsl(220, 13%, 91%);
+    --ea-border-chip: hsl(220, 13%, 68%);    /* 3:1 non-text — chip borders / outlines */
+
+    /* Brand accent — near-black ink (primary buttons + selected date/slot) */
+    --ea-brand: hsl(221, 39%, 11%);
+    --ea-brand-hover: hsl(0, 0%, 6%);
+    --ea-on-brand: #ffffff;
+
+    /* Radii */
+    --ea-radius-md: 6px;
+    --ea-radius-lg: 8px;
+    --ea-radius-2xl: 16px;
+
+    /* Elevation — one soft multi-layer shadow for the main card */
+    --ea-shadow-elevation-low:
+        0 1px 1px rgba(0, 0, 0, 0.07),
+        0 1px 2px rgba(0, 0, 0, 0.08),
+        0 2px 2px rgba(0, 0, 0, 0.10),
+        0 0 8px rgba(0, 0, 0, 0.05);
+
+    /* Motion */
+    --ea-dur-fast: 150ms;
+    --ea-dur-normal: 220ms;
+    --ea-dur-slow: 400ms;
+    --ea-ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);   /* enter */
+    --ea-ease-sharp: cubic-bezier(0.4, 0, 0.2, 1);      /* state change / exit */
+    --ea-move-sm: 8px;
+    --ea-move-md: 16px;
+}

@@ -9,6 +9,8 @@
  * @since       v1.5.0
  * ---------------------------------------------------------------------------- */
 
+@import 'tokens';
+
 // Mixins
 @mixin datepicker-day-highlight($size: 24px) {
     width: $size;
@@ -617,4 +619,28 @@ li.language {
 .cc-revoke,
 .cc-window {
     z-index: 999 !important;
+}
+
+/* ACCESSIBILITY — additive focus visibility + reduced motion (redesign a11y).
+   Purely additive: adds a visible focus ring and honours reduced-motion for
+   transitions. Does NOT remove existing focus rings or freeze the loading
+   spinner (animation-duration is left untouched), so it cannot break behaviour.
+   ------------------------------------------------------------------------- */
+:focus-visible {
+    outline: 3px solid var(--ea-brand, #16181d);
+    outline-offset: 2px;
+}
+
+/* On the brand-coloured header, a white ring keeps 3:1 contrast. */
+#header :focus-visible {
+    outline-color: var(--bs-white, #fff);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
