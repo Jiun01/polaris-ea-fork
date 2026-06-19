@@ -12,12 +12,12 @@
         <h2 class="frame-title fw-light text-center mb-4 text-muted"><?= lang('appointment_date_and_time') ?></h2>
 
         <div class="row frame-content">
-            <div class="col-12 col-lg-6">
+            <div class="col-12 col-lg-7">
                 <div id="select-date" class="mx-auto my-4"></div>
 
             </div>
 
-            <div class="col-12 col-lg-6">
+            <div class="col-12 col-lg-5">
                 <div id="select-time" class="mx-auto py-3" style="max-width: 288px;">
                     <div class="mb-3">
                         <label for="select-timezone" class="form-label">
@@ -29,7 +29,7 @@
                         ]); ?>
                     </div>
 
-                    <div id="available-hours" class="overflow-auto my-3 pe-2" style="max-height: 250px;"></div>
+                    <div id="available-hours" class="overflow-auto my-3 pe-2" style="max-height: 250px;" role="group" aria-live="polite" aria-atomic="false"></div>
 
                 </div>
             </div>

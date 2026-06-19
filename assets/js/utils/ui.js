@@ -174,6 +174,7 @@ window.App.Utils.UI = (function () {
             dateFormat: getDateFormat(),
             locale: getFlatpickrLocale(),
             static: true,
+            monthSelectorType: 'static',
             ...params,
         });
     }

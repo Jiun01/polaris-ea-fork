@@ -15,13 +15,6 @@
     </div>
 
     <div class="mb-3 me-lg-5 mb-lg-0">
-        <?= lang('licensed_under') ?>
-        <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" target="_blank">
-            GPL-3.0
-        </a>
-    </div>
-
-    <div class="mb-3 me-lg-5 mb-lg-0">
         <span id="select-language" class="badge bg-dark">
             <i class="fas fa-language me-2"></i>
         	<?= ucfirst(config('language')) ?>

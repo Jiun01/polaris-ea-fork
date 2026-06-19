@@ -9,11 +9,17 @@
  * @since       v1.5.0
  * ---------------------------------------------------------------------------- */
 
-/* Responsive booking wizard styles (rounded corners and shadow on md+ screens) */
+/* Booking wizard card shell — floating rounded card on md+ screens.
+   Redesign: softer radius + subtle border + soft multi-layer elevation
+   (--ea-* tokens from _tokens.scss). CSS-only; no DOM/JS change. */
 @media (min-width: 768px) {
     #book-appointment-wizard {
-        border-radius: var(--bs-border-radius) !important;
-        box-shadow: var(--bs-box-shadow-sm) !important;
+        border: 1px solid var(--ea-border-subtle, #e3e6ed);
+        border-radius: var(--ea-radius-2xl, 16px) !important;
+        box-shadow: var(--ea-shadow-elevation-low,
+            0 1px 1px rgba(0, 0, 0, 0.07),
+            0 2px 2px rgba(0, 0, 0, 0.10),
+            0 0 8px rgba(0, 0, 0, 0.05)) !important;
     }
 }
 
@@ -47,14 +53,32 @@
     font-size: 12px !important;
 }
 
-/* Selected hour button state */
+/* Time slots — compact outlined pill grid (redesign layout).
+   CSS-only: container becomes a 2-col grid; each .available-hour is a pill.
+   Selected state stays tenant-coloured (matches the calendar). */
+#book-appointment-wizard #select-time {
+    max-width: 360px !important;
+}
+
+#book-appointment-wizard #available-hours {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    align-content: start;
+}
+
 #book-appointment-wizard #available-hours .available-hour {
-    margin-bottom: 10px;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 9px 6px !important;
+    border: 1px solid var(--ea-border-chip, #a0a8b8) !important;
+    border-radius: var(--ea-radius-md, 6px) !important;
+    font-variant-numeric: tabular-nums;
 }
 
 #book-appointment-wizard #available-hours .selected-hour {
-    background-color: var(--bs-primary) !important;
-    border-color: var(--bs-primary) !important;
+    background-color: var(--ea-brand, #16181d) !important;
+    border-color: var(--ea-brand, #16181d) !important;
     color: var(--bs-white) !important;
 }
 
@@ -78,5 +102,315 @@
 }
 
 #book-appointment-wizard .flatpickr-calendar.inline {
-    margin: auto; 
+    margin: auto;
+}
+
+/* ============================================================
+   Redesign polish — booking surface (CSS-only; DOM + JS untouched).
+   Tenant-coloured header kept; modern feel via tokens, spacing,
+   refined controls, pill slots (above) and confirmation cards.
+   ============================================================ */
+
+/* Step headings — near-black, semibold (override fw-light/text-muted utilities). */
+#book-appointment-wizard .frame-title {
+    color: var(--ea-text-emphasis, #16181d) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+}
+
+/* Form controls — token radius, clearer border, comfortable padding. */
+#book-appointment-wizard .form-control,
+#book-appointment-wizard .form-select {
+    border-radius: var(--ea-radius-lg, 8px);
+    border-color: var(--ea-border-chip, #a0a8b8);
+    padding: 10px 12px;
+}
+
+#book-appointment-wizard .form-label,
+#book-appointment-wizard label.fs-5 {
+    font-weight: 500;
+    color: var(--ea-text-subtle, #5a6070);
+    margin-bottom: 6px;
+}
+
+#book-appointment-wizard .form-control::placeholder {
+    color: var(--ea-placeholder, #7d8494);
+}
+
+/* Buttons — scoped transition (no `transition: all`), tactile press, token radius. */
+#book-appointment-wizard .btn {
+    border-radius: var(--ea-radius-lg, 8px);
+    transition-property: transform, background-color, border-color, color, box-shadow;
+    transition-duration: var(--ea-dur-fast, 150ms);
+    transition-timing-function: var(--ea-ease-sharp, ease);
+}
+
+#book-appointment-wizard .btn:active {
+    transform: scale(0.97);
+}
+
+/* Step 1 — service description as muted helper text. */
+#book-appointment-wizard #service-description {
+    color: var(--ea-text, #3c4043);
+    margin-top: 8px;
+}
+
+/* Step 4 — confirmation review: clean, balanced, left-aligned summary cards.
+   Overrides the JS-rendered fs-3/fs-5/text-md-end so both panels match. */
+#book-appointment-wizard #appointment-details,
+#book-appointment-wizard #customer-details {
+    background: var(--ea-bg-muted, #f4f6f8);
+    border: 1px solid var(--ea-border-subtle, #e3e6ed);
+    border-radius: var(--ea-radius-lg, 8px);
+    padding: 18px 20px;
+    text-align: left !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    color: var(--ea-text, #3c4043) !important;
+}
+
+/* Card title (service name / "Contact Info") — prominent but not huge. */
+#book-appointment-wizard #appointment-details .fs-3,
+#book-appointment-wizard #customer-details .fs-3 {
+    font-size: 18px !important;
+    color: var(--ea-text-emphasis, #16181d) !important;
+    margin-bottom: 6px !important;
+}
+
+/* Secondary line (provider / customer name) — muted subtitle. */
+#book-appointment-wizard #appointment-details .text-muted,
+#book-appointment-wizard #customer-details .text-muted {
+    color: var(--ea-text-subtle, #5a6070) !important;
+    font-weight: 500 !important;
+}
+
+/* Meta-row icons — muted, fixed width so rows align. */
+#book-appointment-wizard #appointment-details i.fas,
+#book-appointment-wizard #customer-details i.fas {
+    width: 18px;
+    text-align: center;
+    color: var(--ea-text-muted, #9aa0ad) !important;
+}
+
+/* ============================================================
+   Step 2 — date picker (flatpickr → clean Cal-style grid).
+   Strips ALL flatpickr/material chrome incl. flatpickr's own inner
+   borders, then rebuilds borderless. !important wins over the
+   material_green theme + the company_color inline <style>.
+   ============================================================ */
+
+/* Surface — fully borderless / transparent. */
+#book-appointment-wizard .flatpickr-calendar,
+#book-appointment-wizard .flatpickr-innerContainer,
+#book-appointment-wizard .flatpickr-rContainer,
+#book-appointment-wizard .flatpickr-days,
+#book-appointment-wizard .flatpickr-weekdays {
+    width: 100% !important;
+    max-width: none !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+}
+
+#book-appointment-wizard .flatpickr-calendar { padding: 0; }
+
+/* Size the day area to its content (removes the empty space at the bottom). */
+#book-appointment-wizard .flatpickr-days,
+#book-appointment-wizard .dayContainer {
+    height: auto !important;
+    min-height: 0 !important;
+}
+
+/* Header — transparent; flex so "June 2026" sits left + nav arrows group right. */
+#book-appointment-wizard .flatpickr-months,
+#book-appointment-wizard .flatpickr-month,
+#book-appointment-wizard .flatpickr-current-month,
+#book-appointment-wizard .flatpickr-weekdays,
+#book-appointment-wizard span.flatpickr-weekday {
+    background: transparent !important;
+}
+
+#book-appointment-wizard .flatpickr-months {
+    display: flex !important;
+    align-items: center;
+    padding: 0 2px 16px;
+}
+
+#book-appointment-wizard .flatpickr-month {
+    order: 0;
+    flex: 1 1 auto;
+    height: auto !important;
+    color: var(--ea-text-emphasis, #16181d) !important;
+}
+
+/* "June 2026" — static plain text (month rendered as a span via
+   monthSelectorType:'static'); month bold, year lighter, tightly aligned. */
+#book-appointment-wizard .flatpickr-current-month {
+    position: static !important;
+    left: auto !important;
+    width: auto !important;
+    padding: 0 !important;
+    height: auto !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+#book-appointment-wizard .flatpickr-current-month .cur-month {
+    margin: 0 !important;
+    color: var(--ea-text-emphasis, #16181d) !important;
+    font-weight: 700 !important;
+    font-size: 21px !important;
+}
+
+#book-appointment-wizard .flatpickr-current-month .numInputWrapper {
+    width: auto !important;
+    height: auto !important;
+    display: inline-flex;
+    align-items: center;
+}
+
+#book-appointment-wizard .flatpickr-current-month input.cur-year {
+    width: 4ch !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    line-height: 1 !important;
+    color: var(--ea-text-subtle, #5a6070) !important;
+    font-weight: 400 !important;
+    font-size: 21px !important;
+}
+
+/* Hide the number spinner arrows (year). */
+#book-appointment-wizard .numInputWrapper span.arrowUp,
+#book-appointment-wizard .numInputWrapper span.arrowDown {
+    display: none !important;
+}
+
+/* Nav arrows — static + ordered so both group on the right. */
+#book-appointment-wizard .flatpickr-prev-month,
+#book-appointment-wizard .flatpickr-next-month {
+    position: static !important;
+    top: auto !important;
+    height: auto !important;
+    width: auto !important;
+    padding: 6px !important;
+    border-radius: 6px;
+}
+
+#book-appointment-wizard .flatpickr-prev-month { order: 1; }
+#book-appointment-wizard .flatpickr-next-month { order: 2; }
+
+/* Keep the back arrow visible (greyed) even at the min month, like the reference. */
+#book-appointment-wizard .flatpickr-prev-month.flatpickr-disabled {
+    display: inline-flex !important;
+    opacity: 0.35;
+    cursor: default;
+}
+
+#book-appointment-wizard .flatpickr-prev-month svg,
+#book-appointment-wizard .flatpickr-next-month svg {
+    width: 19px;
+    height: 19px;
+    fill: var(--ea-text, #3c4043) !important;
+}
+
+#book-appointment-wizard .flatpickr-prev-month:not(.flatpickr-disabled):hover,
+#book-appointment-wizard .flatpickr-next-month:hover {
+    background: var(--ea-bg-subtle, #eef0f2) !important;
+}
+
+#book-appointment-wizard .flatpickr-prev-month:not(.flatpickr-disabled):hover svg,
+#book-appointment-wizard .flatpickr-next-month:hover svg {
+    fill: var(--ea-text-emphasis, #16181d) !important;
+}
+
+/* Weekday + day grid — 7 equal columns; headers align to the day columns. */
+#book-appointment-wizard .flatpickr-weekdaycontainer,
+#book-appointment-wizard .dayContainer {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+}
+
+#book-appointment-wizard .flatpickr-weekdays {
+    height: auto !important;
+    padding-bottom: 8px;
+}
+
+#book-appointment-wizard span.flatpickr-weekday {
+    width: auto !important;
+    flex: none !important;
+    color: var(--ea-text-muted, #9aa0ad) !important;
+    font-weight: 500 !important;
+    font-size: 11px !important;
+    text-transform: uppercase;
+}
+
+/* Day cells — SQUARE; grey when available, near-black when selected. */
+#book-appointment-wizard .flatpickr-day {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1;
+    line-height: 1 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: var(--ea-radius-lg, 8px) !important;
+    background: var(--ea-bg-subtle, #eef0f2) !important;
+    color: var(--ea-text-emphasis, #16181d) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    font-variant-numeric: tabular-nums;
+}
+
+#book-appointment-wizard .flatpickr-day:hover {
+    background: var(--ea-bg-emphasis, #e2e5ea) !important;
+}
+
+#book-appointment-wizard .flatpickr-day.selected,
+#book-appointment-wizard .flatpickr-day.selected:hover {
+    background: var(--ea-brand, #16181d) !important;
+    color: #fff !important;
+}
+
+/* Today — dot under the number. */
+#book-appointment-wizard .flatpickr-day.today {
+    position: relative;
+}
+
+#book-appointment-wizard .flatpickr-day.today::after {
+    content: "";
+    position: absolute;
+    bottom: 7px;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    margin-left: -2px;
+    border-radius: 50%;
+    background: var(--ea-text, #3c4043);
+}
+
+#book-appointment-wizard .flatpickr-day.today.selected::after {
+    background: #fff;
+}
+
+/* Past / out-of-month / disabled — no fill, faded. */
+#book-appointment-wizard .flatpickr-day.flatpickr-disabled,
+#book-appointment-wizard .flatpickr-day.prevMonthDay,
+#book-appointment-wizard .flatpickr-day.nextMonthDay {
+    background: transparent !important;
+    color: var(--ea-text-muted, #c4c7cc) !important;
 }
