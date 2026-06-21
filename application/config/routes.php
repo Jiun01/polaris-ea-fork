@@ -216,6 +216,10 @@ $route['api/v1/availabilities']['get'] = 'api/v1/availabilities_api_v1/get';
 
 $route['api/v1/internal/tenants/sync']['post'] = 'api/v1/internal_api_v1/tenants_sync';
 
+$route['api/v1/internal/tenants/provision']['post'] = 'api/v1/internal_api_v1/provision_admin';
+
+$route['api/v1/internal/tenants/(:any)/provision']['delete'] = 'api/v1/internal_api_v1/deprovision/$1';
+
 /*
 | -------------------------------------------------------------------------
 | CUSTOM ROUTING
