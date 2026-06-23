@@ -116,8 +116,11 @@ USER www-data
 
 EXPOSE 9000
 
+# Liveness = php-fpm accepting FastCGI connections on :9000. NOT pgrep — procps
+# isn't in the slim Debian image, so `pgrep` always exits 127 → permanent
+# (unhealthy). php is always present, so probe the FPM port directly.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD pgrep -x php-fpm > /dev/null || exit 1
+    CMD php -r '$f=@fsockopen("127.0.0.1",9000,$e,$s,2);exit($f?0:1);' || exit 1
 
 # Entrypoint self-configures (config.php from env) then execs the CMD.
 ENTRYPOINT ["docker-entrypoint.sh"]
