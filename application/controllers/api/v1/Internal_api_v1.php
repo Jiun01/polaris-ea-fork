@@ -34,6 +34,11 @@ class Internal_api_v1 extends EA_Controller
         $this->load->model('services_model');
         $this->load->library('accounts');
         $this->load->library('email_messages');
+        // NOTE: customer-facing links built here (e.g. the provision reset link)
+        // use the public base_url, pinned for the whole /api/v1/* surface by the
+        // pin_api_public_base_url post_controller_constructor hook — see
+        // application/hooks/api_public_base_url.php. Do NOT rely on site_url()
+        // resolving against the request host on this internal path.
     }
 
     /**

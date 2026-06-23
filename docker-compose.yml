@@ -7,6 +7,28 @@ services:
     environment:
       - POLARIS_EA_JWT_SECRET=e2e-test-secret-at-least-32-bytes!!
       - POLARIS_WEBHOOK_SECRET=e2e-webhook-secret
+      # EA self-configures config.php from these on boot (docker-entrypoint.sh).
+      # The defaults target ea-mysql/eauser, but this dev stack's db service is
+      # `mysql`/`user`, so they MUST be set explicitly or the app can't connect.
+      - EA_DB_HOST=mysql
+      - EA_DB_NAME=easyappointments
+      - EA_DB_USER=user
+      - EA_DB_PASSWORD=password
+      - EA_AUTO_MIGRATE=true
+      # Public base URL EA bakes into customer-facing links. MUST differ from the
+      # request host (playwright BASE_URL → nginx :8090) so the reset-link E2E in
+      # tests/e2e/provisioning.spec.ts is meaningful, not vacuous.
+      - EA_BASE_URL=https://calendar.test
+      # Transactional mail → mailpit (plain SMTP, no TLS/auth) so the provisioning
+      # reset email is captured by the suite instead of failing in PHP mail().
+      - EA_SMTP_HOST=mailpit
+      - EA_SMTP_PORT=1025
+      - EA_SMTP_CRYPTO=none
+      - EA_SMTP_USER=
+      - EA_SMTP_FROM_ADDRESS=noreply@getpolaris.my
+    depends_on:
+      - mysql
+      - mailpit
     volumes:
       - '.:/var/www/html'
       - './docker/php-fpm/php-ini-overrides.ini:/usr/local/etc/php/conf.d/99-overrides.ini'

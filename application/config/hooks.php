@@ -23,6 +23,19 @@ $hook['post_controller_constructor'][] = [
 ];
 
 /**
+ * Pin base_url to the configured public URL on the /api/v1/* surface so
+ * customer-facing links (provisioning reset email, appointment reschedule links)
+ * never bake in the internal request host (e.g. ea-nginx). See the hook file.
+ */
+$hook['post_controller_constructor'][] = [
+    'class' => '',
+    'function' => 'pin_api_public_base_url',
+    'filename' => 'api_public_base_url.php',
+    'filepath' => 'hooks',
+    'params' => [],
+];
+
+/**
  * Probabilistically clean up old storage files (runs ~1% of requests). (upstream 1.6.0)
  */
 $hook['post_system'][] = [

@@ -15,5 +15,14 @@ echo "➜ Install NPM Dependencies"
 echo "➜ Build Project Assets"
 [[ -d assets/vendor ]] || npx gulp compile
 
+# Honor EA_BASE_URL for the public base URL baked into customer-facing links
+# (e.g. the provisioning reset email). The dev config.php otherwise hardcodes
+# http://localhost, which would make tests/e2e/provisioning.spec.ts vacuous
+# (request host == public host). Mirrors how the prod entrypoint sources it.
+if [[ -n "${EA_BASE_URL:-}" && -f config.php ]]; then
+  echo "➜ Pinning config.php BASE_URL to ${EA_BASE_URL}"
+  sed -i "s#const BASE_URL = '[^']*';#const BASE_URL = '${EA_BASE_URL}';#" config.php
+fi
+
 echo "➜ Listen To Incoming Requests"
 php-fpm

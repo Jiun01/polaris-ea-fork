@@ -14,6 +14,13 @@ export const TENANT_A_ID   = process.env['E2E_TENANT_A_ID']   ?? '00000000-0000-
 export const TENANT_A_SLUG = process.env['E2E_TENANT_A_SLUG'] ?? 'acme';
 export const TENANT_B_ID   = process.env['E2E_TENANT_B_ID']   ?? '00000000-0000-0000-0000-000000000002';
 export const MAILPIT_URL   = process.env['E2E_MAILPIT_URL']   ?? 'http://localhost:8025';
+// HMAC secret for the internal provisioning endpoints — mirrors the EA dev
+// compose POLARIS_WEBHOOK_SECRET and the Polaris client's EA_PROVISIONING_HMAC_SECRET.
+export const WEBHOOK_SECRET   = process.env['E2E_WEBHOOK_SECRET']   ?? 'e2e-webhook-secret';
+// The public base-URL host the provisioned reset link MUST use. Set via the EA
+// app's EA_BASE_URL; MUST differ from the request host (playwright BASE_URL) or
+// the reset-link regression test is vacuous.
+export const PUBLIC_BASE_HOST = process.env['E2E_PUBLIC_BASE_HOST'] ?? 'calendar.test';
 
 /** True when running with real tenant UUIDs (not placeholders). */
 export const HAS_REAL_TENANTS =
@@ -84,6 +91,32 @@ export async function apiGet(
     return { status: res.status(), body };
 }
 
+// ── Internal provisioning HMAC signer ──────────────────────────────────────────
+
+/**
+ * Sign a raw request body for the internal /api/v1/internal/* endpoints.
+ * Mirrors the Polaris client `_sign`: 'sha256=' + hex(hmac_sha256(secret, body)).
+ * NOTE: hex digest (matches PHP hash_hmac default), NOT base64url like makeJwt.
+ */
+export function signPolaris(rawBody: string): string {
+    return 'sha256=' + crypto.createHmac('sha256', WEBHOOK_SECRET).update(rawBody).digest('hex');
+}
+
+/**
+ * Return the first http(s) URL in an HTML/text blob. When `mustContain` is given,
+ * return the first URL whose text contains that substring — needed because the
+ * reset email also has header links (e.g. getpolaris.my) before the reset link.
+ */
+export function extractUrl(body: string, mustContain = ''): string {
+    const esc = mustContain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = mustContain
+        ? new RegExp(`https?://[^\\s"'<>)]*${esc}[^\\s"'<>)]*`)
+        : /https?:\/\/[^\s"'<>)]+/;
+    const m = body.match(re);
+    if (!m) throw new Error(`no URL${mustContain ? ` containing "${mustContain}"` : ''} found in email body`);
+    return m[0];
+}
+
 // ── Mailpit helpers ───────────────────────────────────────────────────────────
 
 export interface MailpitMessage {
@@ -122,4 +155,16 @@ export async function waitForEmail(
 /** Delete all messages in the mailpit inbox. */
 export async function clearMailpit(): Promise<void> {
     await fetch(`${MAILPIT_URL}/api/v1/messages`, { method: 'DELETE' });
+}
+
+/**
+ * Fetch a message's full body (HTML + Text). The list endpoint used by
+ * waitForEmail returns only summaries (no HTML/Text), so the rendered body —
+ * needed to inspect links — must be fetched per-message by ID.
+ */
+export async function fetchMailBody(id: string): Promise<string> {
+    const res = await fetch(`${MAILPIT_URL}/api/v1/message/${id}`);
+    if (!res.ok) throw new Error(`mailpit message ${id} fetch failed: ${res.status}`);
+    const data = (await res.json()) as { HTML?: string; Text?: string };
+    return (data.HTML ?? '') + '\n' + (data.Text ?? '');
 }

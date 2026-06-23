@@ -27,8 +27,13 @@ if ($smtp_host !== '') {
     $config['smtp_user'] = getenv('EA_SMTP_USER') ?: '';
     $config['smtp_pass'] = getenv('EA_SMTP_PASS') ?: '';
     $config['smtp_auth'] = ($config['smtp_user'] !== '');
-    // 465 = implicit SSL; 587/25 = STARTTLS. Override with EA_SMTP_CRYPTO.
-    $config['smtp_crypto'] = getenv('EA_SMTP_CRYPTO') ?: ($smtp_port === 465 ? 'ssl' : 'tls');
+    // 465 = implicit SSL; 587/25 = STARTTLS. Override with EA_SMTP_CRYPTO; set it
+    // to 'none' for a plain (unencrypted) relay such as Mailpit in the E2E stack.
+    $crypto = getenv('EA_SMTP_CRYPTO');
+    if ($crypto === false || $crypto === '') {
+        $crypto = ($smtp_port === 465 ? 'ssl' : 'tls');
+    }
+    $config['smtp_crypto'] = ($crypto === 'none') ? '' : $crypto;
 } else {
     $config['protocol'] = 'mail';
 }
