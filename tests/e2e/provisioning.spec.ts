@@ -37,14 +37,34 @@ test.describe.configure({ mode: 'serial' });
 const PROVISION_PATH = '/index.php/api/v1/internal/tenants/provision';
 const ADMIN_EMAIL = 'owner.acme@example.test';
 
-function provisionPayload(): Record<string, string> {
+// Dedicated, isolated tenant ids for the username tests — provision creates rows
+// for any tenant_id (no pre-seed required), so these never collide with the
+// seeded tenants the other specs use. Fixed values keep the tests idempotent.
+const CUSTOM_TENANT = '00000000-0000-0000-0000-0000000000b1';
+const DUP_TENANT = '00000000-0000-0000-0000-0000000000b2';
+const CUSTOM_USERNAME = 'e2e-custom-admin';
+
+function provisionPayload(overrides: Record<string, string> = {}): Record<string, string> {
     return {
         tenant_id: TENANT_A_ID,
         slug: TENANT_A_SLUG,
         email: ADMIN_EMAIL,
         first_name: 'Acme',
         last_name: 'Owner',
+        ...overrides,
     };
+}
+
+/** DELETE the tenant's EA footprint (HMAC over an empty body), so a follow-up
+ *  provision creates a fresh admin (used to make the duplicate-username test
+ *  deterministic regardless of prior runs). */
+async function deprovision(
+    request: import('@playwright/test').APIRequestContext,
+    tenantId: string,
+) {
+    return request.delete(`/index.php/api/v1/internal/tenants/${tenantId}/provision`, {
+        headers: { 'X-Polaris-Signature': signPolaris('') },
+    });
 }
 
 /** POST a (optionally tampered) signed provision request. */
@@ -105,4 +125,54 @@ test.describe('EA tenant provisioning (internal API)', () => {
         const res = await provision(request, { sig: 'sha256=bad' });
         expect(res.status()).toBe(401);
     });
+
+    test('uses an operator-chosen username when provided', async ({ request }) => {
+        const raw = JSON.stringify(
+            provisionPayload({
+                tenant_id: CUSTOM_TENANT,
+                slug: 'e2e-custom-user',
+                email: 'owner.custom@example.test',
+                username: CUSTOM_USERNAME,
+            }),
+        );
+        const res = await provision(request, { raw });
+        expect(res.status()).toBe(201);
+        const body = (await res.json()) as Record<string, unknown>;
+        expect(body['username']).toBe(CUSTOM_USERNAME);
+    });
+
+    test('rejects a duplicate (globally taken) username with 409', async ({ request }) => {
+        // Occupy CUSTOM_USERNAME (idempotent), then clean a separate tenant so its
+        // find_admin returns null and the EA uniqueness pre-check fires on reuse.
+        await provision(request, {
+            raw: JSON.stringify(
+                provisionPayload({
+                    tenant_id: CUSTOM_TENANT,
+                    slug: 'e2e-custom-user',
+                    email: 'owner.custom@example.test',
+                    username: CUSTOM_USERNAME,
+                }),
+            ),
+        });
+        await deprovision(request, DUP_TENANT);
+        const res = await provision(request, {
+            raw: JSON.stringify(
+                provisionPayload({
+                    tenant_id: DUP_TENANT,
+                    slug: 'e2e-dup-user',
+                    email: 'owner.dup@example.test',
+                    username: CUSTOM_USERNAME,
+                }),
+            ),
+        });
+        expect(res.status()).toBe(409);
+        const body = (await res.json()) as Record<string, unknown>;
+        expect(body['error']).toBe('username_taken');
+    });
 });
+
+// Part A (admin user_settings.tenant_id stamp → backend login works) is a 2-line
+// mirror of Providers_model and is verified at the unit level + in prod (data
+// backfilled, login confirmed). A full login-via-reset-token e2e is omitted here:
+// it needs the reset flow + the per-admin random password, which is disproportionate
+// for a change already proven equivalent to the (passing) provider path.

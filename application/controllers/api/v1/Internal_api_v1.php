@@ -132,12 +132,44 @@ class Internal_api_v1 extends EA_Controller
             MY_Controller::set_tenant_context($tenant_id);
 
             // ── 1. Admin (the reset-link recipient / owner login) ──────────────
-            // Username is GLOBALLY unique (validate_username is not tenant-scoped),
-            // so derive it from the globally-unique slug. Throwaway password — the
-            // tenant sets their own via the reset link below.
+            // Username is GLOBALLY unique (validate_username is not tenant-scoped).
+            // Use the operator-provided username when given, else derive it from the
+            // globally-unique slug. Throwaway password — the tenant sets their own
+            // via the reset link below.
             $admin = $this->find_admin($tenant_id);
             if ($admin === null) {
-                $admin_username = 'admin-' . $slug;
+                $req_username = trim((string) ($payload['username'] ?? ''));
+                $admin_username = ($req_username !== '') ? $req_username : ('admin-' . $slug);
+
+                if (!preg_match('/^[A-Za-z0-9._-]{3,50}$/', $admin_username)) {
+                    http_response_code(422);
+                    echo json_encode([
+                        'error' => 'invalid_username',
+                        'message' => 'username must be 3-50 chars: letters, digits, . _ -',
+                    ]);
+                    return;
+                }
+
+                // Global uniqueness pre-check (usernames are not tenant-scoped). A
+                // concurrent identical provision can still race to the save() below,
+                // which the outer try/catch turns into a 500 — acceptable for an
+                // operator-driven endpoint.
+                $taken = $this->db
+                    ->select('id_users')
+                    ->from('user_settings')
+                    ->where('username', $admin_username)
+                    ->limit(1)
+                    ->get()
+                    ->row_array();
+                if ($taken) {
+                    http_response_code(409);
+                    echo json_encode([
+                        'error' => 'username_taken',
+                        'message' => 'That username is already in use. Choose another.',
+                    ]);
+                    return;
+                }
+
                 $admin_id = $this->admins_model->save([
                     'first_name' => $first_name,
                     'last_name'  => $last_name,
@@ -209,6 +241,7 @@ class Internal_api_v1 extends EA_Controller
                 'admin_user_id' => (int) $admin['id'],
                 'provider_id' => (int) $provider_id,
                 'service_id' => (int) $service_id,
+                'username' => $admin['username'] ?? null,
             ]);
         } catch (Throwable $e) {
             log_message('error', 'EA provision_admin failed: ' . $e->getMessage());

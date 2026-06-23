@@ -299,7 +299,12 @@ class Admins_model extends MY_Model
         $count = $this->db->get_where('user_settings', ['id_users' => $admin_id])->num_rows();
 
         if (!$count) {
-            $this->db->insert('user_settings', ['id_users' => $admin_id]);
+            // Polaris: stamp tenant_id on the user_settings row so Accounts::
+            // check_login can set the tenant context from user_settings.tenant_id
+            // (else backend login throws TenantContextMissingException). Mirrors
+            // Providers_model::set_settings.
+            $settings_tenant_id = MY_Controller::$global_admin_mode ? '' : (MY_Controller::$tenant_id ?? '');
+            $this->db->insert('user_settings', ['id_users' => $admin_id, 'tenant_id' => $settings_tenant_id]);
         }
 
         foreach ($settings as $name => $value) {
