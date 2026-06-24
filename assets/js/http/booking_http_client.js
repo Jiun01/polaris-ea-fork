@@ -187,6 +187,13 @@ App.Http.Booking = (function () {
             post_data: formData,
         };
 
+        // Polaris: echo the bot booking-link binding token back so the server can
+        // confirm the matching pending booking. Only present for bot-link bookings.
+        const polarisRef = vars('polaris_ref');
+        if (polarisRef) {
+            data.polaris_ref = polarisRef;
+        }
+
         if ($captchaText.length > 0) {
             data.captcha = $captchaText.val();
         }

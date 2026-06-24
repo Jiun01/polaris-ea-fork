@@ -109,7 +109,14 @@
                         <?= lang('about') ?>
                     </a>
                     <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="<?= site_url('booking') ?>" target="_blank">
+                    <?php
+                        // Polaris: link to THIS tenant's public booking page (/book/{slug}),
+                        // mirroring backend_footer.php — not the slug-less site_url('booking').
+                        $CI = &get_instance();
+                        $CI->load->model('polaris_tenant_model');
+                        $header_booking_slug = $CI->polaris_tenant_model->resolve_tenant_slug(MY_Controller::$tenant_id);
+                    ?>
+                    <a class="dropdown-item" href="<?= $header_booking_slug ? site_url('book/' . $header_booking_slug) : site_url('appointments') ?>" target="_blank">
                         <i class="fas fa-external-link me-2"></i>
                         <?= lang('booking') ?>
                     </a>

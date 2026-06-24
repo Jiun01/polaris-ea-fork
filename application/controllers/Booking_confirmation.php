@@ -31,6 +31,7 @@ class Booking_confirmation extends EA_Controller
         $this->load->model('providers_model');
         $this->load->model('services_model');
         $this->load->model('customers_model');
+        $this->load->model('polaris_tenant_model'); // Polaris: resolve the tenant's booking-page slug
 
         $this->load->library('google_sync');
     }
@@ -56,10 +57,16 @@ class Booking_confirmation extends EA_Controller
 
         $add_to_google_url = $this->google_sync->get_add_to_google_url($appointment['id']);
 
+        // Polaris: the tenant's own public booking page slug (/book/{slug}). The
+        // "Go to booking page" button links here, NOT to company_link (which may be
+        // the generic Polaris site for tenants without a website).
+        $booking_slug = $this->polaris_tenant_model->resolve_tenant_slug(MY_Controller::$tenant_id);
+
         html_vars([
             'page_title' => lang('success'),
             'company_color' => setting('company_color'),
             'company_link' => setting('company_link'),
+            'booking_slug' => $booking_slug,
             'google_analytics_code' => setting('google_analytics_code'),
             'matomo_analytics_url' => setting('matomo_analytics_url'),
             'matomo_analytics_site_id' => setting('matomo_analytics_site_id'),

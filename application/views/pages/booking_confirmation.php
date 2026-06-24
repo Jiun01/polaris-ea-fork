@@ -19,8 +19,8 @@
         </p>
 
         <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mt-4">
-            <?php $company_link = vars('company_link'); ?>
-            <a href="<?= !empty($company_link) ? e($company_link) : site_url() ?>" class="btn btn-primary px-4 py-2"<?= !empty($company_link) ? ' target="_blank" rel="noopener"' : '' ?>>
+            <?php $booking_slug = vars('booking_slug'); ?>
+            <a href="<?= $booking_slug ? site_url('book/' . $booking_slug) : site_url() ?>" class="btn btn-primary px-4 py-2" target="_blank" rel="noopener">
                 <i class="fas fa-calendar-alt me-2"></i>
                 <?= lang('go_to_booking_page') ?>
             </a>

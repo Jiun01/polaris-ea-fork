@@ -15,7 +15,8 @@
         </p>
 
         <div class="mt-4">
-            <a href="<?= site_url() ?>" class="btn btn-primary px-4 py-2">
+            <?php $booking_slug = vars('booking_slug'); ?>
+            <a href="<?= $booking_slug ? site_url('book/' . $booking_slug) : site_url() ?>" class="btn btn-primary px-4 py-2" target="_blank" rel="noopener">
                 <i class="fas fa-calendar-alt me-2"></i>
                 <?= lang('go_to_booking_page') ?>
             </a>

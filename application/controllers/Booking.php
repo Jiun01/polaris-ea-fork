@@ -346,8 +346,22 @@ class Booking extends EA_Controller
             $customer = null;
         }
 
+        // Polaris: the binding token from the bot's booking link (?polaris_ref=v1.<...>).
+        // Opaque to EA — echoed back verbatim on submit so Polaris can confirm the
+        // matching pending booking. Validate shape (base64url, two dots) + cap length;
+        // empty when absent (organic/non-bot booking) → no confirm callback fires.
+        $polaris_ref = (string) $this->input->get('polaris_ref');
+        if (
+            $polaris_ref !== '' &&
+            (strlen($polaris_ref) > 2048 ||
+                !preg_match('#^v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$#', $polaris_ref))
+        ) {
+            $polaris_ref = ''; // malformed — drop rather than forward garbage
+        }
+
         script_vars([
             'manage_mode' => $manage_mode,
+            'polaris_ref' => $polaris_ref,
             'available_services' => $available_services,
             'available_providers' => filter_sensitive_users_data($available_providers),
             'date_format' => $date_format,
@@ -665,6 +679,15 @@ class Booking extends EA_Controller
             );
 
             $this->webhooks_client->trigger(WEBHOOK_APPOINTMENT_SAVE, $appointment);
+
+            // Polaris: confirm the matching pending booking back to Polaris when this
+            // submit came from a bot booking link (carries polaris_ref). Best-effort —
+            // the appointment is already saved; a callback failure must NOT fail the
+            // booking (would 5xx the customer for an appointment that exists).
+            $polaris_ref = (string) request('polaris_ref', '');
+            if ($polaris_ref !== '') {
+                $this->notify_polaris_appointment_confirmed($appointment, $service, $provider, $polaris_ref);
+            }
 
             $response = [
                 'appointment_id' => $appointment['id'],
@@ -1009,5 +1032,73 @@ class Booking extends EA_Controller
         $result = json_decode($body, true);
 
         return isset($result['success']) && $result['success'] === true;
+    }
+
+    /**
+     * Polaris: POST a signed appointment-confirm to the Polaris API so it can flip
+     * the matching pending booking to confirmed. Best-effort; never throws.
+     *
+     * Body: { polaris_ref, appointment_id, start_datetime, end_datetime, service_name }.
+     * start/end are ISO-8601 WITH the provider's tz offset — EA stores appointment
+     * datetimes in the provider's local tz, so sending a bare naive string would be
+     * read as UTC by Polaris and skew the slot (see ea_router._parse_dt).
+     * Signature: X-Polaris-Signature: sha256=hash_hmac(sha256, raw_body, polaris_webhook_secret).
+     */
+    private function notify_polaris_appointment_confirmed(
+        array $appointment,
+        array $service,
+        array $provider,
+        string $polaris_ref,
+    ): void {
+        try {
+            $secret = (string) $this->config->item('polaris_webhook_secret');
+            $base_url = rtrim((string) $this->config->item('polaris_api_base_url'), '/');
+
+            if ($secret === '' || $base_url === '') {
+                log_message('error', 'Polaris confirm: webhook secret or api base url unset — skipping callback');
+                return;
+            }
+
+            $tz_name = $provider['timezone'] ?? 'UTC';
+            try {
+                $tz = new DateTimeZone($tz_name);
+            } catch (Exception $e) {
+                $tz = new DateTimeZone('UTC');
+            }
+
+            $start_iso = (new DateTime($appointment['start_datetime'], $tz))->format('c');
+            $end_iso = !empty($appointment['end_datetime'])
+                ? (new DateTime($appointment['end_datetime'], $tz))->format('c')
+                : null;
+
+            $payload = [
+                'polaris_ref' => $polaris_ref,
+                'appointment_id' => (string) $appointment['id'],
+                'start_datetime' => $start_iso,
+                'end_datetime' => $end_iso,
+                'service_name' => $service['name'] ?? null,
+            ];
+            $raw_body = json_encode($payload, JSON_UNESCAPED_SLASHES);
+            $sig = 'sha256=' . hash_hmac('sha256', $raw_body, $secret);
+
+            $ch = curl_init($base_url . '/v1/webhooks/ea');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 5,
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => $raw_body,
+                CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'X-Polaris-Signature: ' . $sig],
+            ]);
+            $resp = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($resp === false || $code < 200 || $code >= 300) {
+                log_message('error', 'Polaris confirm callback failed: http=' . $code . ' appt=' . $appointment['id']);
+            }
+        } catch (Throwable $e) {
+            // Best-effort: swallow so the customer still gets their confirmation page.
+            log_message('error', 'Polaris confirm callback errored: ' . $e->getMessage());
+        }
     }
 }

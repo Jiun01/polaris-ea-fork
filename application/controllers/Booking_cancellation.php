@@ -31,6 +31,7 @@ class Booking_cancellation extends EA_Controller
         $this->load->model('providers_model');
         $this->load->model('services_model');
         $this->load->model('customers_model');
+        $this->load->model('polaris_tenant_model'); // Polaris: resolve the tenant's booking-page slug
 
         $this->load->library('synchronization');
         $this->load->library('notifications');
@@ -135,6 +136,8 @@ class Booking_cancellation extends EA_Controller
                 'google_analytics_code' => setting('google_analytics_code'),
                 'matomo_analytics_url' => setting('matomo_analytics_url'),
                 'matomo_analytics_site_id' => setting('matomo_analytics_site_id'),
+                // Polaris: the tenant's booking-page slug for the "Go to booking page" button.
+                'booking_slug' => $this->polaris_tenant_model->resolve_tenant_slug(MY_Controller::$tenant_id),
             ]);
 
             $this->load->view('pages/booking_cancellation');
