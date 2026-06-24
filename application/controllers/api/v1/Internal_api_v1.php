@@ -131,6 +131,14 @@ class Internal_api_v1 extends EA_Controller
             // model insert/select is then scoped to this tenant.
             MY_Controller::set_tenant_context($tenant_id);
 
+            // ── 0. Seed the tenant's settings rows (idempotent) ────────────────
+            // A freshly provisioned tenant otherwise has ZERO settings rows, so
+            // date_format/company_working_plan resolve to null and the EA frontend
+            // JS crashes (Invalid date format value) — blank calendar + dead
+            // booking page. Seed BEFORE the provider so it inherits the seeded
+            // company_working_plan below.
+            $this->seed_tenant_settings($tenant_id, $first_name, $last_name, $email, $payload);
+
             // ── 1. Admin (the reset-link recipient / owner login) ──────────────
             // Username is GLOBALLY unique (validate_username is not tenant-scoped).
             // Use the operator-provided username when given, else derive it from the
@@ -209,6 +217,10 @@ class Internal_api_v1 extends EA_Controller
                     'first_name' => $first_name,
                     'last_name'  => $last_name,
                     'email'      => 'provider.' . $slug . '@bookings.getpolaris.my',
+                    // Match the seeded company defaults so booking slots render in
+                    // local time rather than UTC (the providers_model default).
+                    'timezone'   => setting('default_timezone') ?: 'Asia/Kuala_Lumpur',
+                    'language'   => setting('default_language') ?: 'english',
                     'services'   => [$service_id],
                     'settings'   => [
                         'username' => 'owner-' . $slug,
@@ -273,7 +285,7 @@ class Internal_api_v1 extends EA_Controller
 
             MY_Controller::set_tenant_context($tenant_id);
 
-            $deleted = ['admins' => 0, 'providers' => 0, 'services' => 0];
+            $deleted = ['admins' => 0, 'providers' => 0, 'services' => 0, 'settings' => 0];
 
             foreach ($this->find_user_ids($tenant_id, DB_SLUG_PROVIDER) as $id) {
                 try { $this->providers_model->delete((int) $id); $deleted['providers']++; }
@@ -299,6 +311,17 @@ class Internal_api_v1 extends EA_Controller
                 }
             }
 
+            // Settings rows complete the tenant's EA footprint. Clearing them on
+            // teardown avoids orphaned rows AND lets a later re-provision of the
+            // same tenant_id re-seed cleanly (seed_tenant_settings' guard skips
+            // when ANY settings row exists).
+            try {
+                $this->db->where('tenant_id', $tenant_id)->delete('settings');
+                $deleted['settings'] = (int) $this->db->affected_rows();
+            } catch (Throwable $e) {
+                log_message('error', 'EA deprovision settings ' . $tenant_id . ': ' . $e->getMessage());
+            }
+
             http_response_code(200);
             header('Content-Type: application/json');
             echo json_encode(['ok' => true, 'tenant_id' => $tenant_id, 'deleted' => $deleted]);
@@ -310,6 +333,81 @@ class Internal_api_v1 extends EA_Controller
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
+
+    /**
+     * Seed the tenant's settings rows so a freshly provisioned calendar is
+     * functional out of the box (date_format, working plan, booking fields,
+     * locale, lead-time). Without this a new tenant has ZERO settings rows, so
+     * date_format/company_working_plan resolve to null and the EA frontend JS
+     * crashes ("Invalid date format value") — blank calendar + dead booking page.
+     *
+     * Idempotent: if the tenant already has ANY settings row it is left untouched
+     * (never clobber a tenant's later customizations — provisioning is gated
+     * upstream by the Polaris router's active-account 409, so this is the only
+     * call in practice). Mirrors docker/seed_e2e.sql: copy the installer template
+     * (rows under tenant_id = '') then force the known-good Polaris/Malaysia
+     * defaults. Runs inside provision_admin's try/catch; a failure 500s the call.
+     * Because the guard skips when ANY row exists, recover a partially-seeded
+     * tenant by deprovisioning (which now clears settings) then re-provisioning,
+     * not by a plain retry.
+     */
+    private function seed_tenant_settings(
+        string $tenant_id,
+        string $first_name,
+        string $last_name,
+        string $email,
+        array $payload,
+    ): void {
+        // Idempotency guard: only seed a brand-new tenant (zero settings rows).
+        $existing = $this->db->where('tenant_id', $tenant_id)->from('settings')->count_all_results();
+        if ($existing > 0) {
+            return;
+        }
+
+        // 1. Copy the installer's template settings (seeded under tenant_id = '')
+        //    so every EA setting the frontend expects exists. INSERT IGNORE keeps
+        //    it replay-safe; the guard above already prevents re-runs.
+        $settings_table = $this->db->dbprefix('settings');
+        $this->db->query(
+            "INSERT IGNORE INTO {$settings_table} (tenant_id, name, value, create_datetime, update_datetime)
+             SELECT ?, name, value, NOW(), NOW() FROM {$settings_table} WHERE tenant_id = ''",
+            [$tenant_id],
+        );
+
+        // 2. Force the known-good, Polaris-specific defaults (guarantees valid
+        //    values even if the template is absent/partial). setting([...]) is a
+        //    tenant-scoped upsert-by-name (see helpers/setting_helper.php).
+        $company_name = trim((string) ($payload['company_name'] ?? '')) ?: trim($first_name . ' ' . $last_name);
+        $company_link = trim((string) ($payload['company_link'] ?? '')) ?: 'https://getpolaris.my';
+        $timezone = trim((string) ($payload['timezone'] ?? '')) ?: 'Asia/Kuala_Lumpur';
+
+        setting([
+            // company identity
+            'company_name' => $company_name,
+            'company_email' => $email,
+            'company_link' => $company_link,
+            // localization
+            'date_format' => 'DMY',
+            'time_format' => 'regular',
+            'first_weekday' => 'monday',
+            'default_language' => 'english',
+            'default_timezone' => $timezone,
+            // business logic / scheduling (company_working_plan carries breaks;
+            // book_advance_timeout is in MINUTES; future_booking_limit in days)
+            'company_working_plan' => self::DEFAULT_WORKING_PLAN,
+            'book_advance_timeout' => '1440', // 24h cancel/reschedule lead-time
+            'future_booking_limit' => '90',
+            // core customer booking fields visible + required on the booking page
+            'display_first_name' => '1',
+            'require_first_name' => '1',
+            'display_last_name' => '1',
+            'require_last_name' => '1',
+            'display_email' => '1',
+            'require_email' => '1',
+            'display_phone_number' => '1',
+            'require_phone_number' => '1',
+        ]);
+    }
 
     /**
      * Verify the HMAC-SHA256 signature and return the raw request body, or emit

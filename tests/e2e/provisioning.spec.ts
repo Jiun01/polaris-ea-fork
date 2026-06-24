@@ -22,6 +22,7 @@ import {
     TENANT_A_SLUG,
     PUBLIC_BASE_HOST,
     signPolaris,
+    apiGet,
     waitForEmail,
     fetchMailBody,
     clearMailpit,
@@ -124,6 +125,48 @@ test.describe('EA tenant provisioning (internal API)', () => {
     test('rejects an invalid HMAC signature with 401', async ({ request }) => {
         const res = await provision(request, { sig: 'sha256=bad' });
         expect(res.status()).toBe(401);
+    });
+
+    test('seeds default tenant settings on a fresh provision', async ({ request }) => {
+        // Regression guard for the 2026-06-23 incident: a freshly provisioned
+        // tenant had ZERO settings rows, so date_format/company_working_plan were
+        // null and the EA frontend crashed ("Invalid date format value") — blank
+        // calendar + dead public booking page. seed_tenant_settings now copies the
+        // installer template + forces the Polaris/Malaysia defaults.
+        const SEED_TENANT = '00000000-0000-0000-0000-0000000000b3';
+        // Tear down first so the seed runs fresh every time (deprovision clears
+        // settings; otherwise the seed's "skip when rows exist" guard would make
+        // re-runs assert stale data).
+        await deprovision(request, SEED_TENANT);
+        const raw = JSON.stringify(
+            provisionPayload({
+                tenant_id: SEED_TENANT,
+                slug: 'e2e-seed-settings',
+                email: 'owner.seed@example.test',
+                company_name: 'Acme Wellness', // enriches the seeded company_name
+            }),
+        );
+        const res = await provision(request, { raw });
+        expect(res.status()).toBe(201);
+
+        // Read the tenant's settings back over the Bearer-JWT settings API and
+        // assert the critical defaults exist (without these the frontend crashes).
+        const { status, body } = await apiGet(request, '/index.php/api/v1/settings', SEED_TENANT);
+        expect(status).toBe(200);
+        const settings = body as Array<{ name: string; value: string }>;
+        const get = (name: string): string | undefined =>
+            settings.find((s) => s.name === name)?.value;
+
+        expect(get('date_format')).toBe('DMY');
+        expect(get('time_format')).toBe('regular');
+        expect(get('first_weekday')).toBe('monday');
+        expect(get('default_timezone')).toBe('Asia/Kuala_Lumpur');
+        expect(get('book_advance_timeout')).toBe('1440');
+        expect(get('future_booking_limit')).toBe('90');
+        expect(get('company_name')).toBe('Acme Wellness');
+        expect(get('display_first_name')).toBe('1');
+        expect(get('require_phone_number')).toBe('1');
+        expect(get('company_working_plan')).toBeTruthy();
     });
 
     test('uses an operator-chosen username when provided', async ({ request }) => {
