@@ -354,10 +354,14 @@ services/providers all four steps show (`1 2 3 4`) and the customer picks.
 
 **Assets are a build gotcha.** `assets/**/*.min.{js,css}` are gitignored build
 artifacts from `gulp scripts`/`gulp styles` (`gulp compile` in the Docker
-image). The cache-buster `config/app.php → cache_busting_token` is **static** —
-**bump it whenever assets are rebuilt** or returning visitors keep cached
-stale files. Local dev bind-mounts the host tree over the image's compiled
-assets, so run `gulp compile` after pulling JS/CSS source changes.
+image). The cache-buster `config/app.php → cache_busting_token` (`?TSJxx`) is
+what changes the asset URL. **In prod it's auto-stamped:** every EA image build
+writes its unique image tag into the token (`EA_ASSET_TOKEN` build arg, see
+`polaris/infra/docker-bake.hcl` + EA `Dockerfile`), so each release busts all
+asset caches automatically. The static `TSJxx` in `app.php` is only the fallback
+for a plain local `docker build` — bump it by hand only there. Local dev
+bind-mounts the host tree over the image's compiled assets, so run `gulp compile`
+after pulling JS/CSS source changes.
 
 ## Related Codemaps
 

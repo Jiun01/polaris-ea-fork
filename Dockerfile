@@ -93,6 +93,21 @@ COPY . .
 COPY --from=assets  /build/assets  ./assets
 COPY --from=vendor  /build/vendor  ./vendor
 
+# Cache-bust ALL front-end assets per release. asset_url() appends
+# ?<cache_busting_token> to every served .min.js/.min.css; stamping the unique
+# per-build image tag here means every new image serves new asset URLs, busting
+# returning-customer + CDN caches automatically (no manual app.php bump to forget
+# — that omission shipped stale booking JS to prod on 2026-06-24). ship.sh/bake
+# pass EA_ASSET_TOKEN=${EA_TAG} (e.g. v1.6.0-r6); a plain `docker build` with no
+# arg leaves the static token in app.php untouched.
+ARG EA_ASSET_TOKEN=""
+RUN if [ -n "$EA_ASSET_TOKEN" ]; then \
+        sed -i "s/\$config\['cache_busting_token'\] = '[^']*';/\$config['cache_busting_token'] = '${EA_ASSET_TOKEN}';/" \
+            application/config/app.php; \
+        grep -q "cache_busting_token'] = '${EA_ASSET_TOKEN}'" application/config/app.php \
+            || { echo "FATAL: failed to stamp cache_busting_token=${EA_ASSET_TOKEN}"; exit 1; }; \
+    fi
+
 # Production PHP settings (no xdebug).
 COPY docker/php-fpm/php-ini-production.ini /usr/local/etc/php/conf.d/polaris-production.ini
 

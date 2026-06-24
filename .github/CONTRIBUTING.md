@@ -76,11 +76,17 @@ docker compose down -v
 > **Asset gotcha (bit us twice):** `assets/**/*.min.{js,css}` are **gitignored
 > build artifacts** — editing a `.scss`/`.js` source does nothing until you
 > rebuild (`npx gulp compile`; the Docker image runs this at build time, but
-> local dev bind-mounts the host tree over the image's compiled assets). And the
-> cache-buster `application/config/app.php → cache_busting_token` is **static**:
-> **bump it (e.g. `TSJ85`→`TSJ86`) whenever you rebuild assets**, or returning
-> browsers keep serving the cached stale files (the `?TSJxx` query is the only
-> thing that changes the asset URL).
+> local dev bind-mounts the host tree over the image's compiled assets).
+>
+> The cache-buster `application/config/app.php → cache_busting_token` (`?TSJxx`)
+> is the only thing that changes the asset URL, so a stale token = returning
+> browsers serve cached old JS/CSS. **In prod this is now automatic:** every EA
+> image build stamps its unique image tag into the token (`EA_ASSET_TOKEN` →
+> `Dockerfile` → `app.php`, see `polaris/infra/docker-bake.hcl`), so each release
+> busts all asset caches with no hand-edit. The static `TSJxx` in `app.php` is
+> only the fallback for a **plain local `docker build`** without the bake arg —
+> bump it by hand only in that case. (A forgotten manual bump shipped stale
+> booking JS to prod on 2026-06-24; the auto-stamp removes that footgun.)
 
 ## E2E Testing
 

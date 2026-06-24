@@ -15,4 +15,8 @@ $config['url'] = Config::BASE_URL;
 
 $config['debug'] = Config::DEBUG_MODE;
 
-$config['cache_busting_token'] = 'TSJ85'; // bump whenever assets/*.min.* are rebuilt
+// Fallback cache-buster for plain local `docker build`. In prod every EA image
+// build auto-stamps the unique image tag here at build time (EA_ASSET_TOKEN arg,
+// see Dockerfile + polaris/infra/docker-bake.hcl), so all asset URLs bust per
+// release without touching this. Only bump by hand for a non-bake local image.
+$config['cache_busting_token'] = 'TSJ85';
