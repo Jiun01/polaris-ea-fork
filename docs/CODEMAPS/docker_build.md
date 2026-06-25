@@ -1,8 +1,8 @@
 # Docker Build Codemap
 
-**Last Updated:** 2026-06-09
+**Last Updated:** 2026-06-24
 **Entry Points:** ./Dockerfile, docker/build.sh
-**Current image:** `ghcr.io/jiun01/polaris-ea:v1.6.0-r4` (prod compose pins moving tag `v1.6.0-prod`)
+**Current image:** `ghcr.io/jiun01/polaris-ea:v1.6.0-r18` (prod compose pins moving tag `v1.6.0-prod`)
 
 ## Architecture
 
@@ -43,7 +43,7 @@
 │  COPY application/ system/ index.php ./                  │
 │  RUN chown -R www-data:www-data /var/www/html           │
 │  ↓                                                       │
-│  Final image: ghcr.io/jiun01/polaris-ea:v1.6.0-r4      │
+│  Final image: ghcr.io/jiun01/polaris-ea:v1.6.0-r18      │
 │  Size: ~600 MB (lean, no build tools)                    │
 │  Extensions: gd, pdo_mysql, curl, xml, mbstring,         │
 │             intl, exif, zip (runtime-only)               │
@@ -62,10 +62,10 @@
 ./docker/build.sh --push
 
 # Custom tag
-./docker/build.sh --tag v1.6.0-r4
+./docker/build.sh --tag v1.6.0-r18
 
 # Push custom tag
-./docker/build.sh --tag v1.6.0-r4 --push
+./docker/build.sh --tag v1.6.0-r18 --push
 ```
 
 ### Environment Variables
@@ -87,9 +87,9 @@ ghcr.io/jiun01/polaris-ea:<VERSION>
 ```
 
 Version defaults to:
-1. Git tag matching `polaris/v*` (e.g., `git tag polaris/v1.6.0-r4`)
+1. Git tag matching `polaris/v*` (e.g., `git tag polaris/v1.6.0-r18`)
 2. Git describe output (strips `polaris/` prefix)
-3. Fallback: `v1.6.0-r4`
+3. Fallback: `v1.6.0-r18`
 
 ### Build Args
 
@@ -97,7 +97,8 @@ Version defaults to:
 docker buildx build \
   --platform linux/amd64 \
   --target production \
-  --tag ghcr.io/jiun01/polaris-ea:v1.6.0-r4 \
+  --build-arg EA_ASSET_TOKEN=v1.6.0-r18 \
+  --tag ghcr.io/jiun01/polaris-ea:v1.6.0-r18 \
   --tag ghcr.io/jiun01/polaris-ea:latest \
   --file Dockerfile \
   [--push]                    # Optional: push to registry
@@ -107,6 +108,7 @@ docker buildx build \
 **Flags:**
 - `--platform linux/amd64` — Single-arch build (x86_64 Linux)
 - `--target production` — Use Stage 3 only
+- `--build-arg EA_ASSET_TOKEN=<tag>` — Stamped into `app.php` `cache_busting_token`; auto-busts all front-end asset URLs per image. Set to the release tag so every image ships fresh assets. When building via `infra/ship.sh` this is injected automatically from `${EA_TAG}`. When building manually, pass it explicitly or returning visitors may get stale JS.
 - `--tag` — Image name + version (set twice for "latest" alias)
 - `--push` — Push to registry after build
 
@@ -298,13 +300,14 @@ docker run \
   -e POLARIS_TURNSTILE_SECRET="$SECRET" \
   -e POLARIS_CORS_ORIGIN="https://getpolaris.my" \
   -e POLARIS_WEBHOOK_SECRET="$WEBHOOK_SECRET" \
-  ghcr.io/jiun01/polaris-ea:v1.6.0-r4
+  -e POLARIS_API_BASE_URL="https://api.getpolaris.my" \
+  ghcr.io/jiun01/polaris-ea:v1.6.0-r18
 ```
 
 To verify no secrets are in the image:
 
 ```bash
-docker inspect ghcr.io/jiun01/polaris-ea:v1.6.0-r4 | jq '.Config.Env'
+docker inspect ghcr.io/jiun01/polaris-ea:v1.6.0-r18 | jq '.Config.Env'
 # Should NOT contain actual secret values
 ```
 
@@ -316,7 +319,7 @@ The script uses Docker's layer caching. To force a clean build:
 docker buildx build \
   --platform linux/amd64 \
   --target production \
-  --tag ghcr.io/jiun01/polaris-ea:v1.6.0-r4 \
+  --tag ghcr.io/jiun01/polaris-ea:v1.6.0-r18 \
   --no-cache \
   .
 ```
@@ -342,7 +345,7 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u jiun01 --password-stdin
 docker buildx build \
   --platform linux/amd64 \
   --target production \
-  --tag ghcr.io/jiun01/polaris-ea:v1.6.0-r4 \
+  --tag ghcr.io/jiun01/polaris-ea:v1.6.0-r18 \
   --tag ghcr.io/jiun01/polaris-ea:latest \
   --push \
   .
@@ -352,10 +355,10 @@ docker buildx build \
 
 ```bash
 # Pull the image
-docker pull ghcr.io/jiun01/polaris-ea:v1.6.0-r4
+docker pull ghcr.io/jiun01/polaris-ea:v1.6.0-r18
 
 # Inspect layers
-docker inspect ghcr.io/jiun01/polaris-ea:v1.6.0-r4
+docker inspect ghcr.io/jiun01/polaris-ea:v1.6.0-r18
 ```
 
 ## Related Codemaps

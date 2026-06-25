@@ -1,7 +1,7 @@
 # Public Booking Codemap
 
-<!-- Generated: 2026-06-02 | Token estimate: ~1500 -->
-**Last Updated:** 2026-06-02
+<!-- Generated: 2026-06-24 | v1.6.0-r18 DEPLOYED | booking-confirm callback COMPLETE; polaris_ref captured index()→script_var→register() POST→notify_polaris_appointment_confirmed(); EA_ASSET_TOKEN auto cache-bust; "Go to booking page" → /book/{slug} via resolve_tenant_slug | Token estimate: ~1600 -->
+**Last Updated:** 2026-06-24
 **Entry Points:** Booking::slug($slug), GET /book/{slug}
 
 > **Note:** the public submission handler is `Booking::register()` (not
@@ -341,11 +341,11 @@ Fix: each page exposes its own `booking_slug` (script var), posts it with
 `from_slug()` (session fallback when absent). See multi_tenancy.md §Scoping
 Caveats #2.
 
-**"Go to booking page" link targets (commit `64174093`).**
-- Admin backend footer (`components/backend_footer.php`) → the logged-in
-  tenant's own `/book/{slug}` (via `Polaris_tenant_model::resolve_tenant_slug`).
-- Booking confirmation/finish page (`pages/booking_confirmation.php`) → the
-  tenant's `company_link` (its website), falling back to `site_url()`.
+**"Go to booking page" link targets (updated v1.6.0-r18).**
+- Admin backend footer (`components/backend_header.php`) → the logged-in tenant's own `/book/{slug}` (via `Polaris_tenant_model::resolve_tenant_slug`); falls back to `/appointments` when slug not resolvable.
+- Booking confirmation page (`views/pages/booking_confirmation.php`) → `/book/{slug}` via `booking_slug` script_var (resolved by `Booking::register()` from `resolve_tenant_slug`); falls back to `site_url()`.
+- Booking cancellation page (`views/pages/booking_cancellation.php`) → same pattern as confirmation: `booking_slug` → `/book/{slug}` or `site_url()`.
+- Previously: confirmation/cancellation linked to `company_link` (the tenant's website) — now consistently links back to the tenant's booking page.
 
 **Step wizard.** `pages/booking.js` renders a 4-step indicator. When a tenant
 has exactly **one service AND one provider**, step 1 (Service & Provider) is
@@ -362,6 +362,53 @@ asset caches automatically. The static `TSJxx` in `app.php` is only the fallback
 for a plain local `docker build` — bump it by hand only there. Local dev
 bind-mounts the host tree over the image's compiled assets, so run `gulp compile`
 after pulling JS/CSS source changes.
+
+## Polaris Booking-Confirmation Callback (v1.6.0-r18)
+
+When a customer arrives at the booking page via a bot-generated link (URL carries `?polaris_ref=<signed token>`), the fork captures and forwards the ref back to Polaris after a successful booking so Polaris can confirm the pending booking row.
+
+### Flow
+
+```
+1. Booking::index()
+   ├─ Reads ?polaris_ref= from query string
+   ├─ Validates format (regex: ^v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$; max 2048 chars)
+   └─ Emits as PHP script_var: <script>var polaris_ref = "v1.xxx.yyy";</script>
+       (empty string if absent or malformed)
+
+2. assets/js/http/booking_http_client.js
+   └─ Includes polaris_ref in the /booking/register JSON POST body
+
+3. Booking::register()
+   ├─ Reads polaris_ref from the POST body
+   ├─ On successful appointment insert:
+   │  └─ if polaris_ref !== '' → calls notify_polaris_appointment_confirmed()
+   └─ Best-effort: exceptions logged, booking response never aborted
+
+4. Booking::notify_polaris_appointment_confirmed()
+   ├─ Builds body: { polaris_ref, appointment_id, start_datetime (provider-tz ISO8601),
+   │                 end_datetime, service_name }
+   ├─ Signs with HMAC-SHA256 (key = polaris_api_base_url config / POLARIS_WEBHOOK_SECRET)
+   ├─ Header: X-Polaris-Signature: sha256=<hex>
+   └─ POST to {polaris_api_base_url}/v1/webhooks/ea
+```
+
+### Configuration
+
+```php
+// application/config/polaris.php
+$config['polaris_api_base_url'] = getenv('POLARIS_API_BASE_URL') ?: 'https://api.getpolaris.my';
+// Signing key: polaris_webhook_secret (same key used for the tenant-sync webhook)
+```
+
+**HMAC signing key:** the `polaris_webhook_secret` config value (env `POLARIS_WEBHOOK_SECRET`). Polaris verifies with the same key stored in its `ea_webhook_hmac_secret` setting.
+
+### Polaris Receiver
+
+`apps/api/polaris_api/webhooks/ea_router.py`:
+- `POST /v1/webhooks/ea`
+- Verifies `X-Polaris-Signature`, decodes `polaris_ref` binding token
+- Calls `link_flow.confirm_booking(...)` — idempotent, flips `bookings` row → `confirmed`
 
 ## Related Codemaps
 

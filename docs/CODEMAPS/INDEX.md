@@ -1,12 +1,12 @@
 # Polaris EA Fork — Codemaps
 
-**Last Updated:** 2026-06-09
+**Last Updated:** 2026-06-24
 
 This directory contains architectural documentation for the Polaris-specific components in the Easy!Appointments fork. All codemaps are generated from the actual codebase and describe the structure as-is.
 
 ## Overview
 
-The Polaris EA fork extends Easy!Appointments v1.6.0 (security release, rebased 2026-05-30) with multi-tenant support, Bearer-token authentication, slug-routed public booking, and bot/consent protections. The fork runs as a containerized SaaS service (current `ghcr.io/jiun01/polaris-ea:v1.6.0-r4`; prod compose pins the moving tag `v1.6.0-prod`). The root URL `/` 302-redirects to the staff `/login` (S3-5; was the marketing site before `r4` / 2026-06-09).
+The Polaris EA fork extends Easy!Appointments v1.6.0 (security release, rebased 2026-05-30) with multi-tenant support, Bearer-token authentication, slug-routed public booking, bot/consent protections, and an appointment-confirm callback to `POST /v1/webhooks/ea` for the booking-confirmation loop. The fork runs as a containerized SaaS service (current `ghcr.io/jiun01/polaris-ea:v1.6.0-r18`; prod compose pins the moving tag `v1.6.0-prod`). The root URL `/` 302-redirects to the staff `/login` (S3-5; was the marketing site before `r4` / 2026-06-09).
 
 ## Codemaps
 
@@ -63,7 +63,7 @@ The integration work (now polaris/v1.6.0-r4, rebased onto upstream 1.6.0) mainta
 ### For Operators
 
 - Environment variables: see **application/config/polaris.php** + the ENV reference at the end of this INDEX
-- Production image: `ghcr.io/jiun01/polaris-ea:v1.6.0-r4` (Easy!Appointments v1.6.0 baseline + Polaris patches; prod pins moving tag `v1.6.0-prod`)
+- Production image: `ghcr.io/jiun01/polaris-ea:v1.6.0-r18` (Easy!Appointments v1.6.0 baseline + Polaris patches; prod pins moving tag `v1.6.0-prod`)
 - Multi-stage Dockerfile: `./Dockerfile` (Node:18 asset compilation → PHP:8.4 vendor install → PHP:8.4-FPM runtime)
 
 ---
@@ -97,6 +97,12 @@ All Polaris-specific configuration is injected at runtime via environment variab
 |----------|------|----------|---------|
 | `POLARIS_WEBHOOK_SECRET` | string | yes | HMAC-SHA256 shared secret for verifying tenant create/update/suspend payloads from Polaris. |
 
+### Appointment-Confirm Callback (v1.6.0-r17+)
+
+| Variable | Type | Required | Purpose |
+|----------|------|----------|---------|
+| `POLARIS_API_BASE_URL` | string | yes (prod) | Public Polaris API base URL. EA POSTs a signed appointment-confirm payload to `{POLARIS_API_BASE_URL}/v1/webhooks/ea` whenever a customer completes a booking that carried a `?polaris_ref=` token. Signed with `POLARIS_WEBHOOK_SECRET` (same key). Defaults to `https://api.getpolaris.my`. Injected by `docker-compose.prod.yml` from the shared `.env`. |
+
 ### Configuration Sources
 
 All variables are read from `application/config/polaris.php`:
@@ -106,6 +112,7 @@ $config['polaris_jwt_secret']       = getenv('POLARIS_EA_JWT_SECRET') ?: '';
 $config['polaris_turnstile_sitekey'] = getenv('POLARIS_TURNSTILE_SITEKEY') ?: '';
 $config['polaris_turnstile_secret']  = getenv('POLARIS_TURNSTILE_SECRET') ?: '';
 $config['polaris_webhook_secret']   = getenv('POLARIS_WEBHOOK_SECRET') ?: '';
+$config['polaris_api_base_url']     = getenv('POLARIS_API_BASE_URL') ?: 'https://api.getpolaris.my';
 ```
 
 For CORS origin, see `application/config/routes.php` line 97:
@@ -113,6 +120,14 @@ For CORS origin, see `application/config/routes.php` line 97:
 ```php
 $_polaris_allowed_origin = getenv('POLARIS_CORS_ORIGIN') ?: 'https://getpolaris.my';
 ```
+
+### Build Arguments
+
+These are Docker build-time ARGs (not runtime env vars). Set in `infra/docker-bake.hcl`; not needed in `.env`.
+
+| Argument | Source | Purpose |
+|----------|--------|---------|
+| `EA_ASSET_TOKEN` | `${EA_TAG}` (the release tag, e.g. `v1.6.0-r18`) | Stamped into `app.php` `cache_busting_token` at build time so all front-end asset URLs are automatically cache-busted per image. Pass explicitly when building outside `ship.sh`: `docker buildx bake ea --set ea.args.EA_ASSET_TOKEN=<tag> --push`. |
 
 ### Example .env (local dev)
 
@@ -127,8 +142,9 @@ POLARIS_TURNSTILE_SECRET=2x0000000000000000000000000000000AA
 # CORS
 POLARIS_CORS_ORIGIN=http://localhost:3000
 
-# Tenant sync webhook
+# Tenant sync webhook + appointment-confirm callback
 POLARIS_WEBHOOK_SECRET=webhook-hmac-secret-at-least-32-bytes
+POLARIS_API_BASE_URL=http://host.docker.internal:8000
 ```
 
 ### Example Docker run
@@ -140,5 +156,6 @@ docker run \
   -e POLARIS_TURNSTILE_SECRET="$TURNSTILE_SECRET" \
   -e POLARIS_CORS_ORIGIN="https://getpolaris.my" \
   -e POLARIS_WEBHOOK_SECRET="$WEBHOOK_SECRET" \
-  ghcr.io/jiun01/polaris-ea:v1.6.0-r4
+  -e POLARIS_API_BASE_URL="https://api.getpolaris.my" \
+  ghcr.io/jiun01/polaris-ea:v1.6.0-r18
 ```
