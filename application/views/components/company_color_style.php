@@ -244,18 +244,29 @@ if (!empty($company_color) && $company_color !== DEFAULT_COMPANY_COLOR):
         background: rgba(var(--bs-primary-rgb), 0.2);
     }
 
-    /* Body background gradient (kept on top of the theme background so dark themes stay dark) */
-    body {
-        background-color: var(--bs-body-bg);
-        background-image: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.03) 0%, rgba(var(--bs-primary-rgb), 0.01) 100%);
-    }
-
     /* Application-specific overrides */
-    #header,
+    /*
+     * Booking header stays tenant-tinted (June decision); the backend
+     * navbar (#header on backend_layout) is now a neutral white CW
+     * surface (see backend_header.php + backend.scss) and must NOT be
+     * repainted with the company color here — only its accent states
+     * (active/hover nav item) pick up the tenant color, via the
+     * `.nav-item.active .nav-link` / `:hover` rule below.
+     */
     #book-appointment-wizard #header,
     #frame-footer .backend-link {
         background-color: var(--bs-primary) !important;
         border-color: var(--bs-primary) !important;
+    }
+
+    /* Backend header accent: active/hover nav item tints with the tenant
+       color instead of the default CW blue accent. Marker confirmed in
+       backend_header.php: `active` class lives on the parent `.nav-item`
+       <li>, not on `.nav-link` itself (see backend.scss header block). */
+    #header .nav-item:hover .nav-link,
+    #header .nav-item.active .nav-link {
+        background: var(--bs-primary-bg-subtle);
+        color: var(--bs-primary);
     }
 
     #book-appointment-wizard .book-step {

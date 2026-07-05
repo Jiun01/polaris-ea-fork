@@ -9,25 +9,25 @@
  * @since       v1.5.0
  * ---------------------------------------------------------------------------- */
 
-// Apple Glass Design Theme
-// Inspired by macOS/iOS glassmorphism
+// Chatwoot "next" Design Theme
+// CW slate neutrals + Woot-blue accent (design-parity restyle w/ Polaris portal)
 
-$theme: 'glass' !default;
+$theme: 'cw-next' !default;
 
 //
 // Color system
 //
 
 $white: #fff !default;
-$gray-100: #fbfbfd !default;
-$gray-200: #f5f5f7 !default;
-$gray-300: #e8e8ed !default;
-$gray-400: #d2d2d7 !default;
-$gray-500: #86868b !default;
-$gray-600: #6e6e73 !default;
-$gray-700: #424245 !default;
-$gray-800: #2d2d2d !default;
-$gray-900: #1d1d1f !default;
+$gray-100: #F9F9FB !default; // n-slate-2
+$gray-200: #F0F0F3 !default; // n-slate-3
+$gray-300: #E8E8EC !default; // n-slate-4
+$gray-400: #B9BBC6 !default; // n-slate-8
+$gray-500: #8B8D98 !default; // n-slate-9
+$gray-600: #60646C !default; // n-slate-11
+$gray-700: #494D52 !default; // n-slate-11/12 blend
+$gray-800: #2A2E33 !default; // n-slate-12 blend
+$gray-900: #1C2024 !default; // n-slate-12
 $black: #000 !default;
 
 // Apple-inspired colors
@@ -42,7 +42,7 @@ $green: #34c759 !default;
 $teal: #5ac8fa !default;
 $cyan: #32ade6 !default;
 
-$primary: #F76F53 !default; // Polaris coral (B11)
+$primary: #2781F6 !default; // Woot blue (n-blue-9) — default accent, tenant company_color overrides
 $secondary: $gray-200 !default;
 $success: $green !default;
 $info: $teal !default;
@@ -51,33 +51,33 @@ $danger: $red !default;
 $light: $gray-100 !default;
 $dark: $gray-900 !default;
 
-$min-contrast-ratio: 2.5 !default;
+$min-contrast-ratio: 3 !default;
 
-// Options - Enable rounded corners for glass effect
+// Options - Enable rounded corners (CW radii, flat elevation)
 
 $enable-rounded: true !default;
 $enable-shadows: true !default;
 $enable-gradients: false !default;
 
-// Border radius - Larger, softer corners like Apple
+// Border radius - CW 8/12px system
 
-$border-radius: 0.75rem !default;
+$border-radius: 0.5rem !default;
 $border-radius-sm: 0.5rem !default;
-$border-radius-lg: 1rem !default;
-$border-radius-xl: 1.25rem !default;
-$border-radius-xxl: 1.5rem !default;
+$border-radius-lg: 0.75rem !default;
+$border-radius-xl: 0.75rem !default;
+$border-radius-xxl: 1rem !default;
 $border-radius-pill: 50rem !default;
 
 // Body
 
-$body-bg: $white !default;
-$body-color: $gray-900 !default;
+$body-bg: #F7F7F7 !default; // cw-background
+$body-color: #1D2126 !default;
 
-// Fonts - Apple SF Pro inspired
+// Fonts - Inter-first (CW backend/account surfaces; Bricolage scoped separately via general.scss)
 
 // stylelint-disable-next-line value-keyword-case
 $font-family-sans-serif:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif,
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif,
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol' !default;
 
 $font-weight-lighter: 200 !default;
@@ -130,7 +130,7 @@ $btn-padding-x: 1.25rem !default;
 $btn-font-size: 0.9375rem !default;
 $btn-line-height: 1.5 !default;
 $btn-font-weight: 500 !default;
-$btn-border-radius: 0.625rem !default;
+$btn-border-radius: 0.5rem !default;
 $btn-border-radius-sm: 0.5rem !default;
 $btn-border-radius-lg: 0.75rem !default;
 
@@ -142,6 +142,10 @@ $btn-padding-x-lg: 1.5rem !default;
 $btn-box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !default;
 $btn-focus-box-shadow: 0 0 0 3px rgba($primary, 0.25) !default;
 
+// CW recipe: hover state driven by filter: brightness(1.1) in the post-import block,
+// not Bootstrap's built-in shade-color darkening — zero the shade so the two don't stack.
+$btn-hover-bg-shade-amount: 0% !default;
+
 // Forms - Clean, minimal inputs
 
 $input-padding-y: 0.625rem !default;
@@ -152,7 +156,7 @@ $input-bg: $white !default;
 $input-disabled-bg: $gray-100 !default;
 $input-border-color: $gray-300 !default;
 $input-border-width: 1px !default;
-$input-border-radius: 0.625rem !default;
+$input-border-radius: 0.5rem !default;
 $input-border-radius-sm: 0.5rem !default;
 $input-border-radius-lg: 0.75rem !default;
 $input-focus-border-color: $primary !default;
@@ -178,27 +182,27 @@ $navbar-light-color: $gray-600 !default;
 $navbar-light-hover-color: $gray-900 !default;
 $navbar-light-active-color: $primary !default;
 
-// Cards - Glass effect base
+// Cards - CW flat surface: white, 1px outline, no shadow
 
 $card-spacer-y: 1.25rem !default;
 $card-spacer-x: 1.5rem !default;
 $card-border-width: 1px !default;
-$card-border-color: rgba(0, 0, 0, 0.08) !default;
-$card-border-radius: 1rem !default;
-$card-box-shadow: $box-shadow !default;
+$card-border-color: var(--ea-border-subtle, #EAEAEA) !default;
+$card-border-radius: 0.75rem !default;
+$card-box-shadow: none !default;
 $card-cap-bg: transparent !default;
 $card-cap-padding-y: 1rem !default;
-$card-bg: rgba(255, 255, 255, 0.9) !default;
+$card-bg: $white !default;
 
-// Modals - Floating glass panels
+// Modals - CW flat floating panel (border + elevation shadow, no blur)
 
-$modal-content-border-width: 0 !default;
-$modal-content-border-radius: 1rem !default;
+$modal-content-border-width: 1px !default;
+$modal-content-border-radius: 0.75rem !default;
 $modal-content-box-shadow-xs: $box-shadow-lg !default;
 $modal-content-box-shadow-sm-up: $box-shadow-lg !default;
 $modal-backdrop-opacity: 0.3 !default;
-$modal-header-border-width: 0 !default;
-$modal-footer-border-width: 0 !default;
+$modal-header-border-width: 1px !default;
+$modal-footer-border-width: 1px !default;
 $modal-header-padding-y: 1.25rem !default;
 $modal-header-padding-x: 1.5rem !default;
 
@@ -283,28 +287,25 @@ $breadcrumb-active-color: $gray-900 !default;
 $btn-close-opacity: 0.4 !default;
 $btn-close-hover-opacity: 0.7 !default;
 
-// Transitions - Smooth Apple-like animations
+// Transitions - scoped properties only (never `transition: all`)
 
-$transition-base: all 0.2s ease-in-out !default;
+$transition-base:
+    color 0.15s ease-in-out,
+    background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out !default;
 $transition-fade: opacity 0.2s ease-in-out !default;
 
 @import '../../../node_modules/bootstrap/scss/bootstrap';
 
-// Apple Glass Design - Custom Styles
-
-// Variables
-
-$glass-bg: rgba(255, 255, 255, 0.95) !default;
-$glass-bg-light: rgba(255, 255, 255, 0.6) !default;
-$glass-border: rgba(0, 0, 0, 0.08) !default;
-$glass-blur: 20px !default;
+// Chatwoot "next" Design - Custom Styles
+// Flat surfaces + 1px borders; shadow reserved for floating elements only (CW elevation philosophy)
 
 // Base styles
 
 body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: linear-gradient(135deg, rgba($primary, 0.03) 0%, rgba($primary, 0.01) 100%);
 }
 
 // Headings - Clean, no uppercase
@@ -330,17 +331,17 @@ h6,
     color: $primary !important;
 }
 
-// Navbar - Glass effect
-// Note: backdrop-filter removed to prevent stacking context issues with dropdowns
+// Navbar - flat, 1px bottom border (neutral chrome; header.php class swap handles the
+// navbar-dark → navbar-light cutover, see backend_header.php)
 
 .navbar {
-    background: $glass-bg;
-    border-bottom: 1px solid $glass-border;
+    background: $white;
+    border-bottom: 1px solid var(--ea-border-subtle, #EAEAEA);
 }
 
 .bg-light {
-    background: $glass-bg !important;
-    border: 1px solid $glass-border !important;
+    background: $white !important;
+    border: 1px solid var(--ea-border-subtle, #EAEAEA) !important;
 
     &.navbar-fixed-top {
         border-width: 0 0 1px;
@@ -351,19 +352,17 @@ h6,
     }
 }
 
-// Buttons - Soft, rounded
+// Buttons - CW recipe: scoped transitions, brightness hover, scale press
 
 .btn {
     font-weight: 500;
     letter-spacing: 0;
-    transition: all 0.2s ease;
+    transition-property: transform, background-color, border-color, color, box-shadow, filter;
+    transition-duration: 100ms;
+    transition-timing-function: ease-out;
 
-    &:hover {
-        transform: translateY(-1px);
-    }
-
-    &:active {
-        transform: translateY(0);
+    &:active:not(:disabled) {
+        transform: scale(0.97);
     }
 
     &-sm {
@@ -381,13 +380,8 @@ h6,
 }
 
 .btn-primary {
-    background: linear-gradient(180deg, lighten($primary, 5%) 0%, $primary 100%);
-    border: none;
-    box-shadow: 0 1px 3px rgba($primary, 0.3);
-
-    &:hover {
-        background: linear-gradient(180deg, $primary 0%, darken($primary, 5%) 100%);
-        box-shadow: 0 4px 12px rgba($primary, 0.35);
+    &:hover:not(:disabled) {
+        filter: brightness(1.1);
     }
 }
 
@@ -429,15 +423,11 @@ h6,
     border: 1px solid $gray-300 !important;
 }
 
-// Cards - Glass morphism
-// Note: backdrop-filter removed to prevent stacking context issues with dropdowns
+// Cards - flat: white, 1px border, no shadow
 
 .card {
-    background: $glass-bg;
-    border: 1px solid $glass-border;
-    box-shadow:
-        0 4px 24px rgba(0, 0, 0, 0.04),
-        0 1px 2px rgba(0, 0, 0, 0.02);
+    border: 1px solid var(--ea-border-subtle, #EAEAEA);
+    box-shadow: none;
 
     &-title,
     &-header {
@@ -446,21 +436,19 @@ h6,
     }
 
     &-header {
-        background: rgba(255, 255, 255, 0.5);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        background: transparent;
+        border-bottom: 1px solid var(--ea-border-subtle, #EAEAEA);
     }
 
     &-footer {
-        background: rgba(255, 255, 255, 0.5);
-        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        background: transparent;
+        border-top: 1px solid var(--ea-border-subtle, #EAEAEA);
     }
 }
 
-// Sidebar glass effect (if applicable)
-// Note: backdrop-filter removed to prevent stacking context issues with dropdowns
 .sidebar,
 .offcanvas {
-    background: $glass-bg !important;
+    background: $white !important;
 }
 
 // Tables - Clean, minimal
@@ -473,25 +461,25 @@ th {
     letter-spacing: 0.03em;
 }
 
-// Dropdowns - Floating glass panels
-// Note: backdrop-filter creates stacking contexts that can trap dropdowns
-// We need to carefully manage z-index and positioning
+// Dropdowns - flat menu, floating shadow (only floating elements get elevation)
 
 .dropdown-menu {
     position: absolute !important;
     z-index: 1050 !important;
-    background: rgba(255, 255, 255, 0.98);
-    border: 1px solid $glass-border;
+    background: $white;
+    border: 1px solid var(--ea-border-subtle, #EAEAEA);
     box-shadow:
-        0 10px 40px rgba(0, 0, 0, 0.15),
-        0 2px 8px rgba(0, 0, 0, 0.08);
+        0 4px 6px -1px rgb(0 0 0 / 0.1),
+        0 2px 4px -2px rgb(0 0 0 / 0.1);
 
     .dropdown-item {
         border-radius: 0.375rem;
         margin: 0.125rem 0.375rem;
         padding: 0.5rem 0.75rem;
         width: auto;
-        transition: background 0.15s ease;
+        transition-property: background-color, color;
+        transition-duration: 100ms;
+        transition-timing-function: ease-out;
 
         &:hover,
         &:focus {
@@ -505,8 +493,7 @@ th {
     }
 }
 
-// Fix stacking contexts - elements with backdrop-filter create new stacking contexts
-// Setting z-index on these elements but keeping them below dropdown z-index
+// Fix stacking contexts - keep floating layers (navbar/card/sidebar/panel) below dropdowns
 .navbar {
     z-index: 1030;
 }
@@ -535,34 +522,29 @@ th {
     z-index: 1050 !important;
 }
 
-
-// Modals - Floating glass panels
+// Modals - flat, 1px border, no blur
 
 .modal-content {
-    backdrop-filter: blur($glass-blur);
-    -webkit-backdrop-filter: blur($glass-blur);
-    background: $glass-bg;
-    border: 1px solid $glass-border;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    background: $white;
+    border: 1px solid var(--ea-border-subtle, #EAEAEA);
+    box-shadow:
+        0 4px 6px -1px rgb(0 0 0 / 0.1),
+        0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
-.modal-backdrop {
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-}
-
-// Forms - Clean inputs
+// Forms - CW focus recipe (scoped transitions, accent border + ring on focus)
 
 .form-control,
 .form-select {
-    transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease;
-    background-color: rgba(255, 255, 255, 0.9);
+    transition-property: border-color, box-shadow;
+    transition-duration: 100ms;
+    transition-timing-function: ease-out;
+    background-color: $white;
 
     &:focus {
         background-color: $white;
-        border-color: $primary;
+        border-color: var(--ea-brand, $primary);
+        box-shadow: 0 0 0 1px var(--ea-brand, $primary);
     }
 }
 
@@ -575,7 +557,7 @@ th {
 
 .input-group-text {
     border-color: $gray-300;
-    background: rgba(255, 255, 255, 0.6);
+    background: $gray-100;
 }
 
 // Badges - Subtle, rounded
@@ -589,12 +571,9 @@ th {
     }
 }
 
-// Alerts - Soft, rounded with glass effect
+// Alerts - flat, tinted
 
 .alert {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-
     &-primary {
         background: rgba($primary, 0.1);
         color: darken($primary, 10%);
@@ -621,22 +600,20 @@ th {
     }
 }
 
-// Panels and containers with glass effect
+// Panels and containers - flat, 1px border
 
 .panel,
 .well,
 .jumbotron {
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    background: $glass-bg;
-    border: 1px solid $glass-border;
+    background: $white;
+    border: 1px solid var(--ea-border-subtle, #EAEAEA);
     border-radius: $border-radius-lg;
 }
 
-// Nav tabs with glass effect
+// Nav tabs
 
 .nav-tabs {
-    border-bottom-color: $glass-border;
+    border-bottom-color: var(--ea-border-subtle, #EAEAEA);
 
     .nav-link {
         border-radius: $border-radius $border-radius 0 0;
@@ -648,7 +625,7 @@ th {
 
         &.active {
             background: $white;
-            border-color: $glass-border $glass-border $white;
+            border-color: var(--ea-border-subtle, #EAEAEA) var(--ea-border-subtle, #EAEAEA) $white;
         }
     }
 }
@@ -667,22 +644,18 @@ th {
     }
 }
 
-// Toast with glass effect
+// Toast - flat, 1px border
 
 .toast {
-    backdrop-filter: blur($glass-blur);
-    -webkit-backdrop-filter: blur($glass-blur);
-    background: $glass-bg;
-    border: 1px solid $glass-border;
+    background: $white;
+    border: 1px solid var(--ea-border-subtle, #EAEAEA);
 }
 
-// Popover with glass effect
+// Popover - flat, floating shadow
 
 .popover {
-    backdrop-filter: blur($glass-blur);
-    -webkit-backdrop-filter: blur($glass-blur);
-    background: $glass-bg;
-    border: 1px solid $glass-border;
+    background: $white;
+    border: 1px solid var(--ea-border-subtle, #EAEAEA);
 }
 
 // List groups
@@ -720,14 +693,16 @@ th {
 
 .btn-close {
     opacity: 0.4;
-    transition: opacity 0.15s ease;
+    transition-property: opacity;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
 
     &:hover {
         opacity: 0.7;
     }
 }
 
-// Scrollbar - Minimal Apple style
+// Scrollbar - slate-6 thumb (CW neutral)
 
 ::-webkit-scrollbar {
     width: 8px;
@@ -739,11 +714,11 @@ th {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
+    background: #D9D9E0; // n-slate-6
     border-radius: 4px;
 
     &:hover {
-        background: rgba(0, 0, 0, 0.3);
+        background: #B9BBC6; // n-slate-8
     }
 }
 

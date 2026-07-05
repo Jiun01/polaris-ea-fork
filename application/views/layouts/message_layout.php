@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <meta name="theme-color" content="#F76F53">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#2781F6">
     <meta name="google" content="notranslate">
 
     <?php slot('meta'); ?>
@@ -22,7 +22,7 @@
 
     <?php slot('styles'); ?>
 </head>
-<body>
+<body class="ea-font-brand">
 <div id="main" class="container min-vh-100">
     <div class="row wrapper min-vh-100 justify-content-center align-items-center py-3">
         <div id="message-frame" class="col-12 col-md-8 col-lg-6 my-auto frame-container text-center bg-body rounded shadow p-4 p-md-5">

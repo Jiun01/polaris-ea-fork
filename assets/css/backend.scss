@@ -9,14 +9,38 @@
  * @since       v1.5.0
  * ---------------------------------------------------------------------------- */
 
-/* Navigation hover and active states */
-#header #header-menu .nav-item:hover {
-    background: rgba(0, 0, 0, 0.1);
+/* ============================================================
+   Header / nav chrome — CW neutral (paired with backend_header.php's
+   navbar-dark bg-primary → navbar-light bg-white border-bottom swap,
+   applied in parallel). Active item is marked server-side with an
+   `active` class on the PARENT `.nav-item` <li> (see backend_header.php,
+   `$active = $active_menu == PRIV_* ? 'active' : ''`), so the real hover/
+   active target is `.nav-item.active .nav-link` — not `.nav-link.active`.
+   ============================================================ */
+#header {
+    background: #fff;
+    border-bottom: 1px solid var(--ea-border-subtle);
 }
 
-#header #header-menu .nav-item.active {
-    background: rgba(0, 0, 0, 0.2);
+#header .nav-link {
+    color: var(--n-slate-11);
+    font-weight: 460;
+    border-radius: var(--ea-radius-lg);
+    transition-property: background-color, color;
+    transition-duration: var(--ea-dur-fast);
+    transition-timing-function: var(--ea-ease-sharp);
 }
+
+#header .nav-item:hover .nav-link,
+#header .nav-link:hover,
+#header .nav-item.active .nav-link {
+    background: var(--cw-accent);
+    color: var(--cw-accent-foreground);
+}
+
+/* Legacy hover/active states (rgba dark overlays) — superseded by the
+   CW recipe above now that the header is a white surface, not a dark
+   coral fill. Kept as a comment for history; do not resurrect. */
 
 /* Notification positioning */
 #notification .alert {
@@ -27,28 +51,30 @@
     bottom: 15px;
 }
 
-/* Modal styling */
+/* Modal styling — CW neutral: flat white header, slate-emphasis title,
+   1px bottom border, no inverted close-icon filter (icon is dark by
+   default so it reads fine on white). Radius + shadow are floating-
+   element values (modals float above the page). */
 body .modal .modal-title {
-    color: var(--bs-white);
+    color: var(--ea-text-emphasis);
 }
 
 body .modal-header {
     padding: 20px 15px;
-    background: var(--bs-primary);
+    background: #fff;
+    border-bottom: 1px solid var(--ea-border-subtle);
 }
 
 body .modal-header h3 {
-    color: var(--bs-white);
+    color: var(--ea-text-emphasis);
     font-size: 20px;
     font-weight: lighter;
 }
 
-body .modal-header .btn-close {
-    filter: brightness(0) invert(1);
-}
-
 body .modal-content {
-    border: none;
+    border: 1px solid var(--ea-border-subtle);
+    border-radius: var(--ea-radius-xl);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -2px rgb(0 0 0 / .1);
 }
 
 /* Full screen modal */
@@ -150,24 +176,54 @@ body .modal.full-screen .modal-push {
     }
 }
 
-/* Filter records entry styling */
+/* Filter records entry styling — CW hover/selected recipe. `.entry.selected`
+   is a tenant-color injector hook (company_color_style.php) — the selector
+   itself MUST survive; only the paint changes here. */
 .backend-page .filter-records .results .entry {
     padding: 10px 7px;
     cursor: pointer;
+    border-left: 2px solid transparent;
+    border-radius: var(--ea-radius-md);
+    transition-property: background-color, border-color;
+    transition-duration: var(--ea-dur-fast);
+    transition-timing-function: var(--ea-ease-sharp);
 }
 
 .backend-page .filter-records .results .entry:hover {
-    background-color: rgba(var(--bs-emphasis-color-rgb), 0.075);
+    background-color: var(--cw-accent);
+}
+
+.backend-page .filter-records .results .entry.selected {
+    background-color: var(--cw-accent);
+    border-left-color: var(--ea-brand);
 }
 
 .backend-page .filter-records .results hr {
     margin: 5px 0;
-    opacity: .1; 
+    opacity: .1;
+}
+
+/* Table headers — CW recipe: no shouty uppercase, medium weight, slate-11. */
+.backend-page table thead th,
+.backend-page .table thead th {
+    text-transform: none;
+    font-weight: 520;
+    color: var(--n-slate-11);
 }
 
 /* Calendar page specific styles */
 #calendar-page #calendar {
     margin-bottom: 15px;
+}
+
+/* #calendar-toolbar: markup already swapped to `bg-white border-bottom`
+   utility classes in calendar.php (was `bg-dark text-white`). SCSS-side
+   safety net so the toolbar stays neutral even under a theme/context
+   where the Bootstrap utility classes don't win on specificity. */
+#calendar-toolbar {
+    background: #fff;
+    color: var(--ea-text);
+    border-bottom: 1px solid var(--ea-border-subtle);
 }
 
 #calendar .fc-header-toolbar {
@@ -190,22 +246,33 @@ body .modal.full-screen .modal-push {
     display: none;
 }
 
+/* Event chips — CW blue ramp (blue-3 bg / blue-7 border / blue-11 text).
+   `.fc-*` DOM is FullCalendar-generated: CSS-only theming, classes preserved. */
 #calendar .fc-event {
-    border: 1px solid var(--bs-info);
-    background-color: var(--bs-info);
-    color: var(--bs-dark);
+    border: 1px solid var(--n-blue-7);
+    background-color: var(--n-blue-3);
+    color: var(--n-blue-11);
+    border-radius: var(--ea-radius-md);
     min-height: 12px;
     font-size: 11px;
 }
 
+/* Unavailability / break / custom event stripes — CSS repeating-gradient
+   replaces the old jpg pattern backgrounds. Classes are JS-checked
+   (calendar_default_view.js) — restyle only, never rename. */
 #calendar-page #calendar .fc-unavailability {
-    background-image: url('../img/unavailability.jpg');
-    background-blend-mode: hard-light;
+    background: repeating-linear-gradient(
+        45deg,
+        var(--n-slate-3),
+        var(--n-slate-3) 6px,
+        var(--n-slate-4) 6px,
+        var(--n-slate-4) 12px
+    );
     font-size: 14px;
-    border-radius: 0;
+    border-radius: var(--ea-radius-md);
     font-weight: bold;
-    color: var(--bs-dark);
-    border: 1px solid var(--bs-border-color);
+    color: var(--ea-text-emphasis);
+    border: 1px solid var(--ea-border-subtle);
 }
 
 #calendar-page #calendar .fc-unavailability.fc-blocked-period {
@@ -214,15 +281,38 @@ body .modal.full-screen .modal-push {
 }
 
 #calendar-page #calendar .fc-break {
-    background-image: url('../img/break.jpg');
+    background: repeating-linear-gradient(
+        45deg,
+        var(--n-amber-3),
+        var(--n-amber-3) 6px,
+        var(--n-slate-4) 6px,
+        var(--n-slate-4) 12px
+    );
 }
 
 #calendar-page #calendar .fc-custom {
-    background-image: url('../img/custom.jpg');
+    background: repeating-linear-gradient(
+        45deg,
+        var(--n-blue-2),
+        var(--n-blue-2) 6px,
+        var(--n-slate-4) 6px,
+        var(--n-slate-4) 12px
+    );
 }
 
 #calendar .fc-unavailability {
-    background: var(--bs-secondary-bg) url('../img/unavailability.jpg');
+    background-color: var(--n-slate-3);
+}
+
+/* Grid chrome — slate-4 borders, blue-2 "today" fill. */
+#calendar .fc-theme-standard td,
+#calendar .fc-theme-standard th {
+    border-color: var(--n-slate-4);
+}
+
+#calendar.fc .fc-daygrid-day.fc-day-today,
+#calendar.fc .fc-timegrid-col.fc-day-today {
+    background-color: var(--n-blue-2);
 }
 
 #calendar-page .fc-daygrid-day-top {
@@ -262,19 +352,33 @@ body .modal.full-screen .modal-push {
     line-height: 26px;
 }
 
+/* Toolbar buttons (prev/next/today/view switch) — CW button recipe:
+   flat, 8px radius, brightness hover, scale press. */
 #calendar .fc-header .fc-button {
     margin-bottom: 8px;
     background-image: none !important;
+    border-radius: var(--ea-radius-lg);
+    transition-property: transform, background-color, border-color, color, filter;
+    transition-duration: var(--ea-dur-fast);
+    transition-timing-function: var(--ea-ease-sharp);
+}
+
+#calendar .fc-header .fc-button:hover:not(:disabled) {
+    filter: brightness(1.1);
+}
+
+#calendar .fc-header .fc-button:active:not(:disabled) {
+    transform: scale(0.97);
 }
 
 #calendar table thead .fc-first {
-    background: var(--bs-light);
+    background: var(--n-slate-2);
 }
 
 #calendar table thead .fc-first th {
     vertical-align: middle;
     padding: 2px 0;
-    color: var(--bs-secondary);
+    color: var(--n-slate-11);
 }
 
 /* Existing customers list in appointments modal */
@@ -331,9 +435,11 @@ body .modal.full-screen .modal-push {
     height: 38px;
 }
 
+/* a11y fix: visible focus ring instead of outline:0 (was invisible-focus). */
 #calendar .select2-container--default.select2-container--focus .select2-selection--multiple {
     border-color: var(--bs-primary);
-    outline: 0;
+    outline: 2px solid var(--ea-brand);
+    outline-offset: 1px;
     box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
 }
 
@@ -396,20 +502,23 @@ body .modal.full-screen .modal-push {
 
 #calendar .calendar-view .date-column .provider-column .event {
     font-size: 10px;
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--ea-radius-md);
     padding: 2px 3px;
     cursor: pointer;
     margin: 1px 25px 1px 1px;
 }
 
+/* Table-view event chips — same blue ramp as the FullCalendar chips above,
+   for visual consistency between the two calendar views. */
 #calendar .calendar-view .date-column .provider-column .event.appointment {
-    background: var(--bs-info);
-    color: var(--bs-white);
+    background: var(--n-blue-3);
+    color: var(--n-blue-11);
+    border: 1px solid var(--n-blue-7);
 }
 
 #calendar .calendar-view .date-column .provider-column .event.unavailability {
-    background: var(--bs-primary);
-    color: var(--bs-white);
+    background: var(--ea-brand);
+    color: var(--ea-on-brand);
 }
 
 /* Customer appointments in customer details */
@@ -630,8 +739,12 @@ body .modal.full-screen .modal-push {
 /* ============================================================
    Redesign polish — calendar admin (backend). Token-consistent with
    the booking surface (--ea-* from _tokens.scss via general.css).
-   Conservative first pass: radius / elevation / controls only (no
-   colour changes while working blind). CSS-only; DOM + JS untouched.
+   Original conservative first pass (radius/controls only, no colour
+   changes) has since been superseded by the CW colour recipes above
+   (header/nav, modals, FullCalendar, filter-records, tables) added in
+   the 2026-07-05 CW design-parity restyle. Remaining rules below are
+   still load-bearing (button/form/card radius) — CSS-only; DOM + JS
+   untouched.
    ============================================================ */
 
 /* Buttons — token radius (matches booking). */
@@ -661,15 +774,15 @@ body .modal.full-screen .modal-push {
     border-radius: var(--ea-radius-lg, 8px);
 }
 
-/* Modals — token radius + soft elevation (header keeps tenant colour). */
+/* Modals — radius/shadow/border now owned by the CW modal rule above
+   (`body .modal-content`, --ea-radius-xl + floating shadow, neutral
+   header). This block previously set --ea-radius-2xl !important, which
+   would win over the new rule at equal specificity — removed so there
+   is exactly one modal-content radius/shadow definition. */
 .modal-content {
-    border-radius: var(--ea-radius-2xl, 16px) !important;
     overflow: hidden;
-    box-shadow: var(--ea-shadow-elevation-low) !important;
 }
 
-/* Calendar event chips — rounded. */
-#calendar .fc-event,
-#calendar .calendar-view .event {
-    border-radius: var(--ea-radius-md, 6px) !important;
-}
+/* Calendar event chips — radius is now set directly on `.fc-event` and
+   `.calendar-view .event.*` above (blue-ramp rules); no separate
+   !important override needed. */

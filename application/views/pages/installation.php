@@ -2,7 +2,7 @@
 <html lang="<?= config('language_code') ?>">
 <head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>Installation | Polaris Calendar</title>
 
@@ -10,7 +10,7 @@
     <link rel="stylesheet" type="text/css" href="<?= asset_url('assets/css/themes/default.css') ?>">
     <link rel="stylesheet" type="text/css" href="<?= asset_url('assets/css/general.css') ?>">
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100 ea-font-ui">
 
 <div id="loading" class="position-fixed top-0 start-0 w-100 vh-100 d-flex justify-content-center align-items-center d-none bg-white">
     <img src="<?= base_url('assets/img/loading.gif') ?>" alt="loading">

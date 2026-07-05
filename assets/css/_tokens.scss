@@ -1,38 +1,45 @@
 /* ----------------------------------------------------------------------------
  * Polaris EA design tokens (--ea-*) — neutral palette, radii, elevation, motion.
- * AA-corrected per the redesign plan's contrast table. These are CSS custom
- * properties only; DEFINING them is inert until a rule references them, so this
- * partial is safe to ship ahead of the visual restyle.
+ * RE-POINTED to the Chatwoot "next" design language (2026-07-05 CW design-parity
+ * restyle): values now resolve through `_cw-palette.scss` (the --cw- and --n-
+ * custom properties) so the
+ * whole `--ea-*` consumer layer re-skins for free. Token NAMES are unchanged —
+ * only their values moved from the old "Apple Glass" coral/near-black scale to
+ * CW slate neutrals + Woot blue. These are CSS custom properties only; DEFINING
+ * them is inert until a rule references them.
  *
- * NOTE: fonts are intentionally NOT defined here — the Polaris brand font
- * (Bricolage Grotesque) is already vendored + applied site-wide in general.scss.
+ * NOTE: fonts are intentionally NOT defined here — brand fonts (Inter on
+ * backend/account, Bricolage Grotesque on booking/message) are vendored +
+ * applied via body-class scoping in general.scss.
  * ---------------------------------------------------------------------------- */
 :root {
     /* Surfaces */
-    --ea-bg: #ffffff;
-    --ea-bg-muted: hsl(210, 20%, 97%);
-    --ea-bg-subtle: hsl(220, 14%, 94%);
+    --ea-bg: #ffffff;                          /* unchanged — cards */
+    --ea-bg-muted: var(--cw-background);       /* page bg #F7F7F7 */
+    --ea-bg-subtle: var(--n-slate-3);          /* #F0F0F3 — day cells, subtle fills */
+    --ea-bg-emphasis: var(--n-slate-4);        /* NEW — was undefined, frontend.scss:380 fell back to #e2e5ea */
 
-    /* Text — AA-corrected (see plan contrast table) */
-    --ea-text-emphasis: hsl(210, 30%, 4%);   /* headings / strong */
-    --ea-text: hsl(220, 6%, 25%);            /* body */
-    --ea-text-subtle: hsl(220, 9%, 38%);     /* darkened from 46% → AA on muted bg */
-    --ea-text-muted: hsl(218, 11%, 65%);     /* decorative / disabled ONLY */
-    --ea-placeholder: #7d8494;               /* 4.5:1 on white */
+    /* Text */
+    --ea-text-emphasis: var(--n-slate-12);     /* #1C2024 — headings / strong */
+    --ea-text: var(--cw-foreground);           /* body */
+    --ea-text-subtle: var(--n-slate-11);       /* #60646C — AA on muted bg */
+    --ea-text-muted: var(--n-slate-9);         /* decorative / disabled ONLY */
+    --ea-placeholder: var(--n-slate-9);
 
     /* Borders */
-    --ea-border-subtle: hsl(220, 13%, 91%);
-    --ea-border-chip: hsl(220, 13%, 68%);    /* 3:1 non-text — chip borders / outlines */
+    --ea-border-subtle: var(--cw-border);      /* #EAEAEA */
+    --ea-border-chip: var(--n-slate-8);        /* #B9BBC6 — keep ≥3:1 non-text */
 
-    /* Brand accent — near-black ink (primary buttons + selected date/slot) */
-    --ea-brand: hsl(221, 39%, 11%);
-    --ea-brand-hover: hsl(0, 0%, 6%);
+    /* Brand accent — follows theme/tenant (Woot blue default, tenant-overridable) */
+    --ea-brand: var(--bs-primary, #2781F6);
+    --ea-brand-hover: var(--ea-primary-hover, #1073E9);  /* injector-provided when tenant color set; blue-10 default */
     --ea-on-brand: #ffffff;
 
     /* Radii */
     --ea-radius-md: 6px;
     --ea-radius-lg: 8px;
-    --ea-radius-2xl: 16px;
+    --ea-radius-xl: 12px;                      /* NEW — CW card radius */
+    --ea-radius-2xl: 16px;                     /* keep — booking hero card */
 
     /* Elevation — one soft multi-layer shadow for the main card */
     --ea-shadow-elevation-low:
