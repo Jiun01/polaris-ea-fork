@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#F76F53">
+    <meta name="theme-color" content="#2781F6">
     <meta name="google" content="notranslate">
 
     <meta property="og:title" content="<?= lang('page_title') . ' ' . e(vars('company_name')) ?> | Polaris Calendar"/>
@@ -32,7 +32,7 @@
     <?php slot('styles'); ?>
 </head>
 
-<body>
+<body class="ea-font-brand">
 <div id="main" class="container min-vh-100">
     <div class="row wrapper min-vh-100 justify-content-center align-items-center py-0 py-md-3">
         <div id="book-appointment-wizard" class="col-12 col-lg-10 col-xl-8 col-xxl-7 bg-body overflow-hidden p-0 my-auto">

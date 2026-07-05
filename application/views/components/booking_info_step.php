@@ -159,7 +159,7 @@
             <i class="fas fa-chevron-left me-2"></i>
             <?= lang('back') ?>
         </button>
-        <button type="button" id="button-next-3" class="btn button-next btn-dark" style="min-width: 120px; margin-right: 10px;"
+        <button type="button" id="button-next-3" class="btn button-next btn-primary" style="min-width: 120px; margin-right: 10px;"
                 data-step_index="3">
             <?= lang('next') ?>
             <i class="fas fa-chevron-right ms-2"></i>

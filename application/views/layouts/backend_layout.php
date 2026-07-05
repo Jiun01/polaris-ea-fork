@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#F76F53">
+    <meta name="theme-color" content="#2781F6">
     <meta name="google" content="notranslate">
 
     <?php slot('meta'); ?>
@@ -27,7 +27,7 @@
 
     <?php slot('styles'); ?>
 </head>
-<body class="d-flex flex-column h-100">
+<body class="d-flex flex-column h-100 ea-font-ui">
 
 <main class="flex-shrink-0">
 

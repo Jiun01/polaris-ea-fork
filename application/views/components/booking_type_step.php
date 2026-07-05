@@ -101,7 +101,7 @@
     <div class="command-buttons text-center my-3 mx-auto d-md-flex justify-content-md-between">
         <span>&nbsp;</span>
 
-        <button type="button" id="button-next-1" class="btn button-next btn-dark" style="min-width: 120px; margin-right: 10px;"
+        <button type="button" id="button-next-1" class="btn button-next btn-primary" style="min-width: 120px; margin-right: 10px;"
                 data-step_index="1">
             <?= lang('next') ?>
             <i class="fas fa-chevron-right ms-2"></i>

@@ -1,0 +1,63 @@
+/* ----------------------------------------------------------------------------
+ * Chatwoot "next" design-system palette — ported verbatim from the Polaris
+ * portal restyle (v1.0.76, `apps/portal/app/globals.css`), itself ported from
+ * the Chatwoot fork. Light mode ONLY — EA ships no dark-mode toggler, so all
+ * dark-scale values are intentionally omitted.
+ *
+ * Radix-derived neutral (slate) + accent (blue) scales, plus the ruby/amber/
+ * teal status colors and the `--cw-*` semantic aliases. This partial defines
+ * the raw palette; `_tokens.scss` re-points the `--ea-*` layer to consume it.
+ * DEFINING these vars is inert until something references them, so this file
+ * is safe to ship ahead of the rest of the restyle.
+ * ---------------------------------------------------------------------------- */
+:root {
+    /* slate (neutrals) */
+    --n-slate-1: #FCFCFD;
+    --n-slate-2: #F9F9FB;
+    --n-slate-3: #F0F0F3;
+    --n-slate-4: #E8E8EC;
+    --n-slate-5: #E0E1E6;
+    --n-slate-6: #D9D9E0;
+    --n-slate-7: #CDCED6;
+    --n-slate-8: #B9BBC6;
+    --n-slate-9: #8B8D98;
+    --n-slate-10: #80838D;
+    --n-slate-11: #60646C;
+    --n-slate-12: #1C2024;
+
+    /* blue (accent ramp; blue-9 = Woot blue) */
+    --n-blue-1: #FBFDFF;
+    --n-blue-2: #F5F9FF;
+    --n-blue-3: #E9F3FF;
+    --n-blue-4: #DAECFF;
+    --n-blue-5: #C9E2FF;
+    --n-blue-6: #B5D5FF;
+    --n-blue-7: #9BC3FC;
+    --n-blue-8: #75ABF7;
+    --n-blue-9: #2781F6;
+    --n-blue-10: #1073E9;
+    --n-blue-11: #086DE0;
+    --n-blue-12: #0B3265;
+
+    /* status */
+    --n-ruby-9: #E54666;  /* destructive */
+    --n-ruby-3: #FEEAED;
+    --n-ruby-11: #CA244D;
+    --n-amber-9: #FFC53D; /* warning (dark text on it) */
+    --n-amber-3: #FFF7C2;
+    --n-amber-11: #AB6400;
+    --n-teal-9: #12A594;  /* success */
+    --n-teal-3: #E0F8F3;
+    --n-teal-11: #008573;
+
+    /* CW semantic tokens (portal `:root`, HSL functional form) */
+    --cw-background: hsl(0, 0%, 96.9%);        /* page bg ≈ #F7F7F7 */
+    --cw-foreground: hsl(210, 13%, 13%);       /* ≈ slate-12 */
+    --cw-card: #FFFFFF;
+    --cw-primary: hsl(214, 91%, 56%);          /* Woot blue #2781F6 */
+    --cw-secondary: hsl(0, 0%, 95.3%);
+    --cw-muted-foreground: #8B8D98;            /* slate-9 */
+    --cw-accent: hsl(213, 100%, 96%);          /* faint blue tint — hovers/active-nav */
+    --cw-accent-foreground: hsl(214, 80%, 42%);
+    --cw-border: hsl(0, 0%, 91.8%);            /* ≈ #EAEAEA */
+}
