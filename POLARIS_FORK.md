@@ -65,15 +65,11 @@ Architectural + developer documentation:
 
 ### Polaris Monorepo (External)
 
-Operational + maintenance docs live in the Polaris SSOT:
-
-| Doc | Path |
-|---|---|
-| Signed PRD | `docs/Polaris V2/EA_Whitelabel/PRD.md` |
-| Execution playbook + progress log | `docs/Polaris V2/EA_Whitelabel/HANDOFF.md` |
-| Per-feature decision register | `docs/Polaris V2/EA_Whitelabel/FEATURELIST.md` |
-| File categorization + rebase gotchas | `docs/Polaris V2/EA_Whitelabel/FORK_MAINTENANCE.md` |
-| Exhaustive brand-string audit | `docs/Polaris V2/EA_Whitelabel/EA_Whitelabel_Scrub_Inventory.md` |
+This fork is the booking subsystem of the Polaris monorepo
+(`github.com/Jiun01/polaris`). The integration contract — Bearer JWT scope,
+tenant-slug routing, tenant-sync webhook — is implemented in
+`application/config/polaris.php`, `application/migrations/07*_polaris*`, and
+`application/controllers/api/v1/`.
 
 ## License attribution
 

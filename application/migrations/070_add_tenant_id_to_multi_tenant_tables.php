@@ -26,7 +26,7 @@
  *
  * REBASE NOTE: keep this as the LAST migration index. On upstream rebase to
  * EA v1.5.3+, renumber 061/062 past upstream's new last index.
- * See docs/Polaris V2/EA_Whitelabel/FORK_MAINTENANCE.md §G2.
+ * See the fork maintenance notes (operator-private docs) §G2 for the renumbering policy.
  */
 class Migration_Add_tenant_id_to_multi_tenant_tables extends EA_Migration
 {

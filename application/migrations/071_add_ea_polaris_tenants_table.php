@@ -20,7 +20,7 @@
  * Postgres for slug → tenant_id resolution on the public booking path.
  *
  * REBASE NOTE: keep this as migration 062, always one after 061.
- * See docs/Polaris V2/EA_Whitelabel/FORK_MAINTENANCE.md §G2.
+ * See the fork maintenance notes (operator-private docs) §G2 for the renumbering policy.
  */
 class Migration_Add_ea_polaris_tenants_table extends EA_Migration
 {
